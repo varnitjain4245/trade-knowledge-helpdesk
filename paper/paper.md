@@ -1,21 +1,20 @@
 # Answers That Can Be Checked: A Citation-Grounded Multilingual Knowledge Platform for Government Contact Centres
 
-**Author One**, **Author Two**, **Author Three**, **Author Four**, **Author Five**
-Department of Computer Science
-[Institution], [City], India
-{author.one, author.two, author.three, author.four, author.five}@[institution].edu
+Varnit Jain, Tanu, Yash Yadav, Swarna Chaudhary, Prof. Sunil
+Computer Science
+KIET Group of Institutions, Ghaziabad, Delhi-NCR, India
 
 ---
 
 **Abstract** — Contact centres serving government trade and commerce administration answer questions whose consequences are material: a licence not obtained holds a consignment at port, and a duty rate quoted wrongly becomes a penalty. Existing retrieval-augmented question answering systems optimise for producing an answer, and treat provenance as a display feature appended after generation. This paper proposes a knowledge platform for such contact centres in which provenance is a structural precondition rather than a presentation choice. Four mechanisms distinguish the design: an answer that cannot be attributed to an approved record is unrepresentable in the system's type system rather than merely discouraged; contradiction between records is detected *before* the confidence threshold is applied, so a disagreement is surfaced as a disagreement rather than silently resolved in favour of the higher-scoring source; a generated draft is verified against the passages that produced it and **suppressed** rather than flagged when unsupported; and refusal is a first-class outcome returned with a success status, so that "no reliable answer" is never presented in the visual or protocol language of failure. The system additionally treats retirement of superseded guidance as immediate through a generation counter that invalidates cached answers atomically, gates a public surface behind a declared coverage floor, and supports six Indian languages with per-language enablement contingent on measured correctness. An implementation over a 51-record trade corpus answered 30 of 30 realistic practitioner questions with citations while correctly refusing all out-of-domain questions. We report the defects that measurement exposed, several of which were invisible to component-level testing.
 
-**Keywords** — Retrieval-augmented generation, grounded question answering, provenance, government contact centre, multilingual information access, knowledge governance, trade facilitation
+*Index Terms* — Retrieval-augmented generation, grounded question answering, provenance, government contact centre, multilingual information access, knowledge governance, trade facilitation
 
 ---
 
 ## I. INTRODUCTION
 
-Learning management systems, customer service platforms and public helpdesks have all converged on a similar architecture for question answering: retrieve candidate passages from a corpus, condition a language model on them, and return generated prose. This pattern, commonly called retrieval-augmented generation, substantially reduces unsupported assertion relative to unconditioned generation, and its adoption across educational and administrative software has been rapid [1], [2].
+Public helpdesks, customer service platforms and enterprise search systems have converged on a common architecture for question answering over a private corpus: retrieve candidate passages, condition a language model on them, and return generated prose [1], [2]. The pattern reduces unsupported assertion relative to unconditioned generation, whose failure modes are documented at length [3], and its adoption across administrative software has been rapid.
 
 The pattern is nonetheless insufficient for a class of application in which the *basis* of an answer matters as much as its content. A contact centre serving India's commerce and industry administration is one such case. Its users are exporters, importers, micro and small enterprises and customs intermediaries; its subject matter is licensing, tariff classification, goods and services tax, incentive schemes and e-commerce obligation. The material is issued continuously by multiple authorities as circulars, notifications and public notices, amended frequently, and published as documents rather than as answers.
 
@@ -35,15 +34,33 @@ This paper proposes a system in which these four properties are architectural co
 
 ## II. RELATED WORK
 
-Retrieval-augmented generation grounds a language model's output in retrieved documents and is now the dominant architecture for question answering over a private corpus [1], [2]. Adaptive learning platforms have integrated large language models to personalise instruction and provide continuous feedback [1], demonstrating that a retrieval-grounded assistant can be embedded in an institutional workflow. The literature reports substantial reduction in unsupported assertion relative to unconditioned generation.
+### A. Retrieval-Augmented Generation
 
-Reported evaluation nonetheless concentrates on answer quality and user engagement rather than on the verifiability of individual claims. Where citation is discussed, it is generally treated as a presentation feature: the retrieved passages are displayed alongside a generated answer, without a mechanism guaranteeing that the answer's claims are entailed by those passages. Recent work on attribution has begun to address this gap by scoring whether generated statements are supported by cited sources, but the resulting signal is typically surfaced as a confidence indicator rather than used to withhold output.
+Conditioning a generator on passages retrieved from a corpus was introduced to give a model non-parametric access to knowledge it was not trained on [1], and has since become the standard architecture for question answering over a private document collection [2]. The motivation is well established: unconditioned generation asserts fluent but unsupported statements at a rate that surveys of the phenomenon document across tasks and domains [3]. Retrieval reduces that rate but does not eliminate it, because nothing in the architecture requires a generated sentence to follow from the passages placed in the prompt.
 
-Gamification and engagement research in learning platforms demonstrates that system design shapes user behaviour in ways beyond the informational [3], [4], [6]. This finding transfers to the present setting with an inverted sign: a helpdesk whose refusals are styled as errors teaches its users that "I do not know" means "the system is broken", and thereby erodes trust in the refusals that protect them. The visual and protocol treatment of a refusal is therefore a correctness concern, not a cosmetic one.
+### B. Attribution and Its Enforcement
 
-Modular client-server architectures are widely adopted for scalability and independent evolution of interface and logic [2], [5], and the present system follows that convention. Bibliometric analysis of two decades of learning management system research documents both breadth of adoption and a persistent gap between content delivery and meaningful engagement [7]; the analogous gap in an administrative helpdesk is between document delivery and an answer a user can act upon with confidence.
+The gap between citing a source and being supported by it has been formalised as attribution, with an interpretable definition and human annotation protocol for deciding whether a generated statement is entailed by the source ascribed to it [4]. Automated evaluation frameworks for retrieval-augmented pipelines operationalise a related notion of faithfulness as a per-response score [11]. In both lines of work the attribution signal is a measurement: it is computed after generation and reported alongside the answer. The present system differs in the use to which the signal is put. A draft that fails verification is not annotated with a low score; it is discarded, and an extractive answer quoting the source record is returned in its place. Verification is a gate rather than a metric.
 
-The contribution of this paper is therefore not retrieval-augmented generation itself, which is established, but a set of governance mechanisms layered upon it: structural enforcement of citation, ordering of contradiction detection before confidence thresholding, suppression rather than annotation of unsupported generation, and treatment of refusal as a successful outcome.
+### C. Ranking and Relevance Estimation
+
+Lexical ranking under the probabilistic relevance framework remains a strong and inspectable baseline for retrieval over a modest corpus, and BM25 is its standard instantiation [5]. Its known weakness is vocabulary mismatch: a question phrased in the language of a practitioner may share few terms with a record written in the language of a circular. Re-ranking retrieved candidates with a model that reads query and passage jointly addresses this, originally with a fine-tuned cross-encoder [6] and more recently by prompting a general-purpose language model to score relevance directly, a use of models as evaluators whose agreement with human judgement and whose characteristic biases have been studied in detail [7]. The system reported here adopts the latter, and treats the resulting score as the confidence on which answering is conditioned rather than as an ordering key alone.
+
+### D. Abstention
+
+Declining to answer when the evidence is insufficient is studied as selective prediction, where a model answers only above a calibrated confidence threshold and coverage is traded against error on the answered subset [8]. That framing matches the present setting, in which the cost of a confident wrong answer about a duty rate or a licence condition greatly exceeds the cost of an admitted gap. What the selective-prediction literature does not address, and what this paper treats as a design obligation, is how the abstention is delivered: a refusal returned in the vocabulary of failure is read by users as a malfunction, so it is returned here with a success status and rendered as content.
+
+### E. Conflicting Evidence
+
+When retrieved passages disagree, model behaviour is neither neutral nor stable: language models are receptive to coherent external evidence yet exhibit confirmation bias when part of the retrieved context agrees with their parametric knowledge [9]. A pipeline that ranks passages and generates from the highest-scoring one therefore resolves disagreements silently, and the resolution is not a judgement the system is competent to make. Contradiction detection is accordingly placed before the confidence threshold in this design, so that a disagreement is surfaced as a disagreement irrespective of either record's score.
+
+### F. Multilingual and Public-Sector Deployment
+
+Multilingual representations covering the major Indian languages are available [10], but availability of a model is not evidence that a particular pipeline answers correctly in a particular language, which is why enablement here is gated on a measured per-language acceptance score rather than assumed. Review of e-government chatbots reports that deployments have largely been confined to simple informational responses, and identifies transparency and citizen trust as the recurring barriers to broader value [12]. The mechanisms described in this paper — enforced citation, visible disagreement, and refusal as a first-class outcome — are directed at precisely that barrier.
+
+### G. Position of This Work
+
+The contribution is not retrieval-augmented generation, which is established [1], [2], nor attribution measurement, which is defined [4]. It is the enforcement of those ideas as structural properties of a serving system: citation made unrepresentable in its absence, contradiction detection ordered before confidence, grounding failure resolved by suppression rather than annotation, refusal returned as success, and answerability read from a record's lifecycle at query time.
 
 ---
 
@@ -65,7 +82,7 @@ The system is specified by rules that hold for every answer on every surface. Th
 
 ### B. Architecture
 
-The system follows a modular client-server architecture [2], [5]. Three browser-based surfaces — an agent console, a public assistant, and a curation and oversight console — communicate with a service layer over a documented interface. The service layer comprises a retrieval component, a relevance judging component, a generation component with two interchangeable strategies, a grounding verifier, a contradiction detector, and a lifecycle service governing the corpus. Persistent state is held in a relational store; corpus records, their lifecycle status, user accounts and the audit record share a single transactional boundary.
+The system follows a modular client-server architecture. Three browser-based surfaces — an agent console, a public assistant, and a curation and oversight console — communicate with a service layer over a documented interface. The service layer comprises a retrieval component, a relevance judging component, a generation component with two interchangeable strategies, a grounding verifier, a contradiction detector, and a lifecycle service governing the corpus. Persistent state is held in a relational store; corpus records, their lifecycle status, user accounts and the audit record share a single transactional boundary.
 
 A single component is the sole producer of answers. Every surface calls it, which is what makes rules R1 to R4 enforceable at one point rather than replicated across three consumers and liable to drift between them.
 
@@ -303,22 +320,26 @@ Future work includes semantic retrieval to reduce refusals caused by vocabulary 
 
 ## REFERENCES
 
-[1] K. Spriggs, M. C. Lau, K. Passi, and L. Zhang, "Personalizing Education through an Adaptive LMS with Integrated LLMs," *arXiv preprint* arXiv:2502.08655, 2025.
+[1] P. Lewis, E. Perez, A. Piktus, F. Petroni, V. Karpukhin, N. Goyal, H. Küttler, M. Lewis, W. Yih, T. Rocktäschel, S. Riedel, and D. Kiela, "Retrieval-augmented generation for knowledge-intensive NLP tasks," in *Advances in Neural Information Processing Systems*, vol. 33, 2020, pp. 9459–9474.
 
-[2] J. P. B. Saputra, H. Prabowo, F. L. Gaol, and G. F. Hertono, "Development of Gamification-Based Learning Management System (LMS) with Agile Approach and Personalization of FSLSM Learning Style to Improve Learning Effectiveness," *Journal of Applied Data Sciences*, vol. 6, no. 1, pp. 714–725, 2025.
+[2] Y. Gao, Y. Xiong, X. Gao, K. Jia, J. Pan, Y. Bi, Y. Dai, J. Sun, M. Wang, and H. Wang, "Retrieval-augmented generation for large language models: A survey," *arXiv preprint* arXiv:2312.10997, 2024.
 
-[3] E. T. Setyoadi, S. Patmanthara, H. W. Herwanto, H. Junaedi, and T. Rahmawati, "A Review of Learning Management System Enhanced by Gamification Through Push Pool Mooring Model," *IRDH International Journal of Technology, Agriculture Natural Sciences*, vol. 2, no. 1, 2025.
+[3] Z. Ji, N. Lee, R. Frieske, T. Yu, D. Su, Y. Xu, E. Ishii, Y. J. Bang, A. Madotto, and P. Fung, "Survey of hallucination in natural language generation," *ACM Computing Surveys*, vol. 55, no. 12, art. 248, pp. 1–38, 2023.
 
-[4] K. Nazokat, "The Role of Digital Gamification in Enhancing Student Motivation," *International Multidisciplinary Journal for Research Development*, vol. 12, no. 1, 2025.
+[4] H. Rashkin, V. Nikolaev, M. Lamm, L. Aroyo, M. Collins, D. Das, S. Petrov, G. S. Tomar, I. Turc, and D. Reitter, "Measuring attribution in natural language generation models," *Computational Linguistics*, vol. 49, no. 4, pp. 777–840, 2023.
 
-[5] K. N. H., "E-Learning Management Systems: Best Practices for Implementation," *Research Invention Journal of Current Issues in Arts and Management*, vol. 4, no. 2, pp. 43–47, 2025.
+[5] S. Robertson and H. Zaragoza, "The probabilistic relevance framework: BM25 and beyond," *Foundations and Trends in Information Retrieval*, vol. 3, no. 4, pp. 333–389, 2009.
 
-[6] M. Ortiz-Rojas, K. Chiluiza, M. Valcke, and C. Bolanos-Mendoza, "How Gamification Boosts Learning in STEM Higher Education: A Mixed Methods Study," *International Journal of STEM Education*, vol. 12, no. 1, 2025.
+[6] R. Nogueira and K. Cho, "Passage re-ranking with BERT," *arXiv preprint* arXiv:1901.04085, 2019.
 
-[7] T.-T. T. Phan, C.-T. Vu, P.-T. T. Doan, D. Luong, T. Bui, T.-H. Le, and D. Nguyen, "Two Decades of Studies on Learning Management System in Higher Education: A Bibliometric Analysis with Scopus Database 2000–2020," *Journal of University Teaching Learning Practice*, vol. 19, no. 3, 2022.
+[7] L. Zheng, W. Chiang, Y. Sheng, S. Zhuang, Z. Wu, Y. Zhuang, Z. Lin, Z. Li, D. Li, E. P. Xing, H. Zhang, J. E. Gonzalez, and I. Stoica, "Judging LLM-as-a-judge with MT-Bench and Chatbot Arena," in *Advances in Neural Information Processing Systems 36: Datasets and Benchmarks Track*, 2023.
 
-[8] A. Malik, G. Dargar, A. Sharma, and P. Pandey, "Predictive Analysis for Retail Shops using Machine Learning for Maximizing Revenue," in *Proc. 7th Int. Conf. Intelligent Computing and Control Systems (ICICCS)*, Madurai, India, 2023, pp. 126–133.
+[8] A. Kamath, R. Jia, and P. Liang, "Selective question answering under domain shift," in *Proc. 58th Annu. Meeting of the Association for Computational Linguistics*, 2020, pp. 5684–5696.
 
-[9] A. Sharma, R. P. Mahapatra, and V. K. Sharma, "An exploration of Fog procedures in comparison with IoT, design, and assessment issues," in *Proc. 10th Int. Conf. Reliability, Infocom Technologies and Optimization (ICRITO)*, Noida, India, 2022, pp. 1–6.
+[9] J. Xie, K. Zhang, J. Chen, R. Lou, and Y. Su, "Adaptive chameleon or stubborn sloth: Revealing the behavior of large language models in knowledge conflicts," in *Proc. 12th Int. Conf. Learning Representations (ICLR)*, 2024.
 
-[10] A. Sharma, A. Vashishta, A. Shahi, A. Saxena, and H. K. Gulati, "Study of Video Suggestions based on Calendar Events," in *Proc. 6th Int. Conf. Intelligent Computing and Control Systems (ICICCS)*, Madurai, India, 2022, pp. 1572–1579.
+[10] S. Khanuja, D. Bansal, S. Mehtani, S. Khosla, A. Dey, B. Gopalan, D. K. Margam, P. Aggarwal, R. T. Nagipogu, S. Dave, S. Gupta, S. C. B. Gali, V. Subramanian, and P. Talukdar, "MuRIL: Multilingual representations for Indian languages," *arXiv preprint* arXiv:2103.10730, 2021.
+
+[11] S. Es, J. James, L. Espinosa-Anke, and S. Schockaert, "RAGAs: Automated evaluation of retrieval augmented generation," in *Proc. 18th Conf. European Chapter of the Association for Computational Linguistics: System Demonstrations*, St. Julians, Malta, 2024, pp. 150–158.
+
+[12] M. E. Cortés-Cediel, A. Segura-Tinoco, I. Cantador, and M. P. Rodríguez Bolívar, "Trends and challenges of e-government chatbots: Advances in exploring open government data and citizen participation content," *Government Information Quarterly*, vol. 40, no. 4, art. 101877, 2023.

@@ -115,7 +115,7 @@ def convert(md: str) -> str:
                 + f'</pre><figcaption>{cap}</figcaption></figure>')
             continue
 
-        if line.startswith("**Abstract**") or line.startswith("**Keywords**"):
+        if line.startswith("**Abstract**") or line.startswith("*Index Terms*"):
             flush()
             out.append(f'<p class="abstract">{inline(line)}</p>')
             i += 1; continue
@@ -211,7 +211,7 @@ def main() -> None:
 
     # The author block is set by hand: IEEE centres it above the columns, and the
     # markdown byline cannot express that layout.
-    md = re.sub(r"^\*\*Author One.*?\n---\n", "", md, flags=re.S | re.M)
+    md = re.sub(r"^Varnit Jain, Tanu.*?\n---\n", "", md, flags=re.S | re.M)
     title_match = re.search(r"^# (.+)$", md, flags=re.M)
     title = title_match.group(1) if title_match else "Paper"
     md = md.replace(f"# {title}\n", "", 1)
