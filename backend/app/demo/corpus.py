@@ -1,0 +1,830 @@
+"""Knowledge corpus for the demonstration.
+
+**Illustrative, not authoritative.** The procedures, terminology, scheme names and
+document structures reflect how India's trade and MSME administration actually works, so
+the desk has something realistic to reason over. Specific rates, ceilings, thresholds and
+dates are approximations for the demonstration and must not be relied on. In service,
+every record here would be the indexed text of a published circular or notification
+rather than a paraphrase.
+
+The corpus is deliberately broad — licensing, customs, GST, MSME registration and
+finance, e-commerce, standards, and the schemes — because a helpdesk that can only answer
+about one topic teaches its users to stop asking.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+
+
+@dataclass(frozen=True)
+class Record:
+    title: str
+    authority: str
+    issued: date
+    language: str
+    topic: str
+    sector: str
+    passages: list[str]
+    status: str = "approved"
+
+
+def _d(y: int, m: int, d: int) -> date:
+    return date(y, m, d)
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Registration and getting started
+# ══════════════════════════════════════════════════════════════════════════════════════
+REGISTRATION: list[Record] = [
+    Record(
+        "Importer Exporter Code — application and validity", "DGFT", _d(2024, 4, 1),
+        "eng", "registration", "any",
+        [
+            "An Importer Exporter Code, or IEC, is mandatory for anyone importing into or "
+            "exporting from India. It is a ten-digit code issued against the applicant's "
+            "PAN, and one PAN can hold only one IEC. Applications are made online through "
+            "the DGFT portal using a digital signature or Aadhaar-based authentication.",
+            "An IEC does not expire, but its details must be confirmed electronically "
+            "between April and June each year even where nothing has changed. An IEC that "
+            "is not confirmed is deactivated, and it is restored automatically once the "
+            "confirmation is filed. No fee is charged for the annual confirmation.",
+            "An IEC is not required for goods imported or exported for personal use "
+            "unconnected with trade, manufacture or agriculture, or for consignments moved "
+            "by a government department or notified charitable institution.",
+        ],
+    ),
+    Record(
+        "Udyam registration for micro, small and medium enterprises", "Ministry of MSME",
+        _d(2024, 4, 1), "eng", "msme_registration", "any",
+        [
+            "Udyam registration is the single registration for a micro, small or medium "
+            "enterprise. It is free, entirely online, and requires only the Aadhaar number "
+            "of the proprietor, managing partner or authorised signatory, together with the "
+            "enterprise's PAN and GSTIN. No document upload or proof is required, as "
+            "investment and turnover are taken from linked income-tax and GST records.",
+            "An enterprise is classified as micro where investment in plant and machinery "
+            "does not exceed one crore rupees and turnover does not exceed five crore; as "
+            "small where investment is up to ten crore and turnover up to fifty crore; and "
+            "as medium where investment is up to fifty crore and turnover up to two hundred "
+            "and fifty crore. Both conditions must be satisfied for a category.",
+            "Classification is reviewed annually from the previous year's returns. An "
+            "enterprise that grows beyond its category retains its existing status and the "
+            "benefits attached to it until the end of the following financial year, so a "
+            "single good year does not remove support abruptly.",
+        ],
+    ),
+    Record(
+        "Registration cum Membership Certificate", "DGFT", _d(2023, 4, 1),
+        "eng", "registration", "any",
+        [
+            "A Registration cum Membership Certificate, or RCMC, is issued by an Export "
+            "Promotion Council or commodity board and evidences membership of that body. "
+            "An RCMC is required to claim benefits under the Foreign Trade Policy, "
+            "including authorisations and most incentive schemes.",
+            "An exporter dealing in more than one product applies to the council relating "
+            "to its main line of business. Where no council covers the product, the "
+            "Federation of Indian Export Organisations issues the certificate. Applications "
+            "are made through the common digital platform and an RCMC is valid for five "
+            "years from the financial year in which it is issued.",
+        ],
+    ),
+    Record(
+        "AD Code registration with customs", "CBIC", _d(2024, 4, 1),
+        "eng", "customs_procedure", "any",
+        [
+            "An Authorised Dealer Code is a fourteen-digit number issued by the bank "
+            "holding the exporter's current account. It must be registered at every port "
+            "from which the exporter intends to ship, because a shipping bill cannot be "
+            "generated at a port where the AD Code is not registered.",
+            "Registration is a one-time step per port and does not expire. Where an "
+            "exporter changes bank, the new AD Code must be registered afresh at each port "
+            "before the next consignment moves.",
+        ],
+    ),
+    Record(
+        "Letter of Undertaking for export without payment of tax", "CBIC", _d(2024, 4, 1),
+        "eng", "gst", "any",
+        [
+            "Exports are zero-rated. An exporter may either pay integrated tax and claim a "
+            "refund of it, or export under a Letter of Undertaking without paying tax at "
+            "all. Most exporters use the Letter of Undertaking because it avoids blocking "
+            "working capital in a refund claim.",
+            "A Letter of Undertaking is filed on the GST portal in form GST RFD-11 and is "
+            "valid for one financial year. A fresh undertaking must be filed at the start "
+            "of each year, and an exporter who fails to file one must pay integrated tax on "
+            "exports until it is filed.",
+        ],
+    ),
+]
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Customs and shipment procedure
+# ══════════════════════════════════════════════════════════════════════════════════════
+CUSTOMS: list[Record] = [
+    Record(
+        "Shipping bill and export clearance", "CBIC", _d(2024, 4, 1),
+        "eng", "customs_procedure", "any",
+        [
+            "A shipping bill is the principal export document and is filed electronically "
+            "on ICEGATE before goods are presented for clearance. It carries the exporter's "
+            "IEC and AD Code, the invoice and packing details, the eight-digit tariff "
+            "classification, and any scheme the exporter intends to claim.",
+            "The intent to claim a scheme benefit must be declared on the shipping bill "
+            "itself. A claim under a remission or drawback scheme cannot be added after the "
+            "shipping bill is filed, and this is the single most common reason an eligible "
+            "exporter loses a benefit.",
+            "Once goods are examined and the Let Export Order is issued, the shipping bill "
+            "becomes proof of export. The Electronic Bank Realisation Certificate follows "
+            "when proceeds are realised and reported by the bank.",
+        ],
+    ),
+    Record(
+        "Bill of entry and import clearance", "CBIC", _d(2024, 4, 1),
+        "eng", "customs_procedure", "any",
+        [
+            "A bill of entry is filed for imported goods before or on arrival. It must be "
+            "presented within one day of the vessel or aircraft arriving, excluding "
+            "holidays; late presentation attracts charges for each day of delay.",
+            "Duty is assessed on the transaction value determined under the customs "
+            "valuation rules, and includes basic customs duty, integrated tax, applicable "
+            "cess and any anti-dumping or safeguard duty. Faceless assessment means the "
+            "assessing officer may sit at a port other than the one where goods arrived.",
+        ],
+    ),
+    Record(
+        "ITC-HS classification of goods", "DGFT", _d(2024, 4, 1),
+        "eng", "classification", "any",
+        [
+            "Goods are classified under the Indian Trade Clarification based on the "
+            "Harmonised System. The first six digits follow the international Harmonised "
+            "System and the remaining two are Indian sub-classifications, giving an "
+            "eight-digit code that determines the duty rate, the import or export policy "
+            "and eligibility for most schemes.",
+            "Every item falls under one of four policy conditions: free, restricted, "
+            "prohibited, or reserved for import or export through a State Trading "
+            "Enterprise. A restricted item may move only against an authorisation; a "
+            "prohibited item may not move at all.",
+        ],
+    ),
+    Record(
+        "Certificate of Origin — preferential and non-preferential", "DGFT",
+        _d(2024, 4, 1), "eng", "documentation", "any",
+        [
+            "A non-preferential Certificate of Origin evidences that goods originate in "
+            "India and is used where the importing country requires proof of origin without "
+            "any tariff concession. It is issued by chambers of commerce and export "
+            "promotion councils through the common digital platform.",
+            "A preferential Certificate of Origin allows the importer to claim a reduced "
+            "tariff under a trade agreement. It requires the goods to satisfy the rules of "
+            "origin in that agreement, which usually means a change in tariff heading, a "
+            "minimum value addition, or both.",
+        ],
+    ),
+    Record(
+        "Export documentation set", "CBIC", _d(2024, 4, 1),
+        "eng", "documentation", "any",
+        [
+            "A standard export consignment carries a commercial invoice, a packing list, "
+            "the shipping bill, a bill of lading or air waybill, and a certificate of "
+            "origin. Depending on the product an inspection certificate, phytosanitary "
+            "certificate or fumigation certificate may also be required.",
+            "The commercial invoice must describe the goods in terms that match the tariff "
+            "classification declared. A description that differs between the invoice and the "
+            "shipping bill is a common cause of clearance delay and of queries on scheme "
+            "claims.",
+        ],
+    ),
+    Record(
+        "Realisation of export proceeds and EDPMS", "RBI", _d(2024, 4, 1),
+        "eng", "payments", "any",
+        [
+            "Export proceeds must ordinarily be realised and repatriated within nine months "
+            "from the date of export. The Export Data Processing and Monitoring System "
+            "tracks each shipping bill against the payment received, and a bill that remains "
+            "outstanding is reported to the authorised dealer bank for follow-up.",
+            "Where realisation is delayed beyond the permitted period the exporter must "
+            "apply to the authorised dealer bank for extension, giving reasons. Persistent "
+            "non-realisation can lead to the exporter being placed on a caution list, which "
+            "restricts further exports without advance payment or a letter of credit.",
+        ],
+    ),
+    Record(
+        "SCOMET items and dual-use export control", "DGFT", _d(2024, 4, 1),
+        "eng", "classification", "engineering",
+        [
+            "Special Chemicals, Organisms, Materials, Equipment and Technologies, known as "
+            "SCOMET, are dual-use items whose export is controlled for strategic reasons. "
+            "The list runs across eight categories including toxic chemicals, nuclear "
+            "materials, electronics, aerospace and munitions.",
+            "Export of a SCOMET item requires authorisation from DGFT regardless of the "
+            "destination, and the application is examined by an inter-ministerial working "
+            "group. Software and technology transfers, including transfer by electronic "
+            "means or by making technology available to a foreign national, are covered.",
+        ],
+    ),
+]
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# GST, duty and refunds
+# ══════════════════════════════════════════════════════════════════════════════════════
+TAXATION: list[Record] = [
+    Record(
+        "Zero-rated supply and GST refund for exporters", "CBIC", _d(2024, 4, 1),
+        "eng", "gst", "any",
+        [
+            "Export of goods or services, and supply to a Special Economic Zone unit or "
+            "developer, are zero-rated supplies. Zero-rating means the outward supply bears "
+            "no tax while input tax credit on the inputs remains available, which is what "
+            "distinguishes it from an exempt supply.",
+            "Refund of unutilised input tax credit is claimed in form GST RFD-01 within two "
+            "years of the relevant date. Where goods are exported on payment of integrated "
+            "tax, the shipping bill itself is treated as the refund application and the "
+            "refund is credited once the export manifest and the GST return match.",
+        ],
+    ),
+    Record(
+        "Components of customs duty on imports", "CBIC", _d(2024, 4, 1),
+        "eng", "tariff", "any",
+        [
+            "The duty payable on an import is built from several components: basic customs "
+            "duty at the rate for the tariff heading, social welfare surcharge calculated on "
+            "that duty, integrated tax at the GST rate for the goods, and compensation cess "
+            "where the goods attract it.",
+            "Some goods additionally attract an Agriculture Infrastructure and Development "
+            "Cess, an anti-dumping duty, a countervailing duty or a safeguard duty. "
+            "Integrated tax paid on import is available as input tax credit; basic customs "
+            "duty is not, which is why it is a real cost rather than a timing difference.",
+        ],
+    ),
+    Record(
+        "Deemed exports", "DGFT", _d(2024, 4, 1), "eng", "schemes", "any",
+        [
+            "Deemed exports are supplies of goods manufactured in India that do not leave "
+            "the country but are treated as exports for the purpose of benefits. They "
+            "include supply against an Advance Authorisation, supply to an Export Oriented "
+            "Unit, and supply of capital goods against an EPCG authorisation.",
+            "Benefits available on deemed exports include advance authorisation for the "
+            "supplier, deemed export drawback, and refund of terminal excise duty where "
+            "applicable. The claim is made by either the supplier or the recipient, but not "
+            "both, and a disclaimer from the other party is required.",
+        ],
+    ),
+]
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# MSME finance, protection and support
+# ══════════════════════════════════════════════════════════════════════════════════════
+MSME: list[Record] = [
+    Record(
+        "Delayed payments to micro and small enterprises", "Ministry of MSME",
+        _d(2024, 4, 1), "eng", "msme_finance", "any",
+        [
+            "A buyer who receives goods or services from a micro or small enterprise must "
+            "pay within the period agreed in writing, and in any case within forty-five days "
+            "of acceptance. Where no period is agreed, payment is due within fifteen days.",
+            "A buyer who pays late is liable to compound interest at three times the bank "
+            "rate notified by the Reserve Bank, calculated monthly from the appointed day. "
+            "This liability arises by statute and cannot be excluded by agreement between "
+            "the parties.",
+            "A supplier may file a claim through the MSME Samadhaan portal. The Micro and "
+            "Small Enterprise Facilitation Council must dispose of a reference within ninety "
+            "days, and a buyer challenging an award must deposit seventy-five per cent of "
+            "the amount before the challenge is heard.",
+        ],
+    ),
+    Record(
+        "Credit Guarantee Fund Trust for Micro and Small Enterprises", "Ministry of MSME",
+        _d(2024, 4, 1), "eng", "msme_finance", "any",
+        [
+            "The credit guarantee scheme allows a bank to lend to a micro or small "
+            "enterprise without collateral or a third-party guarantee. The trust guarantees "
+            "a substantial share of the lender's loss on default, which is what makes the "
+            "collateral-free loan possible.",
+            "Guarantee cover is available for both working capital and term loans up to the "
+            "notified ceiling. Cover is higher for enterprises owned by women, for units in "
+            "the north-eastern region, and for micro enterprises borrowing smaller amounts. "
+            "A guarantee fee is payable annually and is usually passed on to the borrower.",
+        ],
+    ),
+    Record(
+        "Public procurement policy for micro and small enterprises",
+        "Ministry of MSME", _d(2024, 4, 1), "eng", "procurement", "any",
+        [
+            "Every central ministry, department and public sector undertaking must source at "
+            "least twenty-five per cent of its annual procurement from micro and small "
+            "enterprises. Within that, four per cent is reserved for enterprises owned by "
+            "Scheduled Caste or Scheduled Tribe entrepreneurs and three per cent for those "
+            "owned by women.",
+            "Micro and small enterprises are exempt from paying tender fees and earnest "
+            "money deposit. Where a micro or small enterprise quotes within fifteen per cent "
+            "of the lowest price quoted by a large firm, it may supply up to a quarter of "
+            "the tendered value at the lowest quoted price.",
+        ],
+    ),
+    Record(
+        "Prime Minister's Employment Generation Programme", "KVIC", _d(2024, 4, 1),
+        "eng", "msme_finance", "any",
+        [
+            "The programme provides a capital subsidy on bank finance for setting up a new "
+            "micro enterprise in manufacturing or services. The subsidy is a share of the "
+            "project cost, higher in rural areas and higher again for applicants from "
+            "special categories including women, ex-servicemen and applicants from the "
+            "north-eastern region.",
+            "The applicant must contribute a margin from own funds and the balance is a bank "
+            "term loan. The subsidy is kept in a locked deposit for three years, so an "
+            "enterprise that closes early does not retain it. Only new units qualify; an "
+            "existing unit or one that has taken a subsidy under another scheme does not.",
+        ],
+    ),
+    Record(
+        "Zero Defect Zero Effect certification", "Ministry of MSME", _d(2024, 4, 1),
+        "eng", "standards", "any",
+        [
+            "ZED certification assesses a manufacturing enterprise against quality and "
+            "environmental practice across three levels — bronze, silver and gold. The "
+            "assessment covers process control, waste and energy management, occupational "
+            "safety and customer satisfaction.",
+            "Certification carries a subsidy on the assessment cost, higher for micro "
+            "enterprises and for units owned by women, along with support for testing "
+            "equipment and handholding. A certified unit gains preference in some public "
+            "procurement and in several state incentive schemes.",
+        ],
+    ),
+    Record(
+        "Trade Receivables Discounting System", "RBI", _d(2024, 4, 1),
+        "eng", "msme_finance", "any",
+        [
+            "TReDS is a regulated electronic platform on which a micro, small or medium "
+            "enterprise can discount an invoice raised on a large buyer. Financiers bid to "
+            "purchase the receivable, and the supplier receives funds well before the credit "
+            "period ends.",
+            "Discounting on the platform is without recourse to the supplier, so the "
+            "financier carries the risk of the buyer not paying. Companies above a notified "
+            "turnover threshold, and all central public sector enterprises, are required to "
+            "be onboarded so that their suppliers can use the platform.",
+        ],
+    ),
+]
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# E-commerce and digital trade
+# ══════════════════════════════════════════════════════════════════════════════════════
+ECOMMERCE: list[Record] = [
+    Record(
+        "Export of goods through courier and postal mode", "CBIC", _d(2024, 4, 1),
+        "eng", "ecommerce", "any",
+        [
+            "Small consignments may be exported through an authorised courier or through "
+            "post office export parcels, which suits e-commerce sellers shipping directly to "
+            "overseas buyers. A courier shipping bill is filed electronically and clearance "
+            "is faster than for a general cargo consignment.",
+            "Value limits apply to the simplified courier route, and consignments above the "
+            "limit must move as regular cargo on a full shipping bill. Restricted goods and "
+            "goods requiring a licence cannot use the courier route regardless of value.",
+        ],
+    ),
+    Record(
+        "E-commerce export hubs and consolidation", "DGFT", _d(2024, 4, 1),
+        "eng", "ecommerce", "any",
+        [
+            "E-commerce export hubs allow small sellers to consolidate shipments, complete "
+            "customs formalities and hold stock close to an airport. The hub handles "
+            "documentation and returns processing, which are the two costs that most often "
+            "make small cross-border orders unviable for an individual seller.",
+            "Goods that a foreign buyer returns can be re-imported through the hub without "
+            "the exporter losing the benefits already claimed, provided the return is "
+            "identified against the original export and takes place within the notified "
+            "period.",
+        ],
+    ),
+    Record(
+        "Consumer protection obligations of e-commerce entities",
+        "Department of Consumer Affairs", _d(2024, 4, 1), "eng", "ecommerce", "any",
+        [
+            "An e-commerce entity must display the legal name of the seller, its address, "
+            "customer care contact and grievance officer details, the country of origin of "
+            "the goods, and the total price with a breakdown of all charges. Nothing may be "
+            "added at checkout that was not shown before the buyer chose to buy.",
+            "Every e-commerce entity must appoint a grievance officer whose name and contact "
+            "are displayed on the platform. A complaint must be acknowledged within forty-"
+            "eight hours and resolved within one month of receipt.",
+            "A platform may not manipulate search results to mislead, may not misrepresent "
+            "the quality of goods, and may not refuse to take back defective or spurious "
+            "goods delivered late. Cancellation charges cannot be imposed on a consumer "
+            "unless the platform bears equivalent charges when it cancels.",
+        ],
+    ),
+    Record(
+        "Dark patterns in online interfaces",
+        "Department of Consumer Affairs", _d(2023, 11, 30), "eng", "ecommerce", "any",
+        [
+            "A dark pattern is a design choice in an online interface that deceives or "
+            "manipulates a user into an action they did not intend or would not otherwise "
+            "have taken — subscribing, spending more, or surrendering data. The term "
+            "covers the design of the interface itself rather than the wording of an "
+            "advertisement.",
+            "Specified deceptive design practices are prohibited on any platform selling to "
+            "Indian consumers. These include false urgency, basket sneaking where an item is "
+            "added without consent, confirm shaming, forced action, subscription traps, "
+            "interface interference, bait and switch, drip pricing, disguised advertising, "
+            "nagging, trick wording, SaaS billing and rogue malware.",
+            "Drip pricing and basket sneaking are the two practices most often found in "
+            "routine checkout flows. Showing a price that increases through the checkout, or "
+            "pre-selecting an insurance or donation add-on, falls within the prohibition "
+            "whether or not the buyer eventually notices.",
+        ],
+    ),
+    Record(
+        "Open Network for Digital Commerce", "DPIIT", _d(2024, 4, 1),
+        "eng", "ecommerce", "any",
+        [
+            "The Open Network for Digital Commerce is a set of open protocols that allow a "
+            "buyer on one application to transact with a seller registered on another. It "
+            "unbundles the marketplace into buyer applications, seller applications and "
+            "gateways, so a small seller is not confined to one platform's buyer base.",
+            "A seller joins through a seller-side application that handles catalogue, "
+            "inventory and fulfilment integration. Because discovery is network-wide rather "
+            "than platform-owned, a listing becomes visible across every buyer application "
+            "on the network.",
+        ],
+    ),
+    Record(
+        "Tax collected at source by e-commerce operators", "CBIC", _d(2024, 4, 1),
+        "eng", "gst", "any",
+        [
+            "An e-commerce operator that collects payment on behalf of sellers must collect "
+            "tax at source on the net value of taxable supplies made through the platform, "
+            "and deposit it by the tenth of the following month. The seller takes credit of "
+            "the amount collected in its electronic cash ledger.",
+            "A seller supplying through an e-commerce operator must ordinarily register for "
+            "GST regardless of turnover. An exemption is available to a supplier of goods "
+            "below the threshold who supplies only within one state and holds a PAN and an "
+            "enrolment number on the portal.",
+        ],
+    ),
+    Record(
+        "Legal metrology declarations on packaged goods",
+        "Department of Consumer Affairs", _d(2024, 4, 1), "eng", "standards", "any",
+        [
+            "A pre-packaged commodity must declare the name and address of the manufacturer "
+            "or packer, the common name of the commodity, the net quantity, the month and "
+            "year of manufacture, the retail sale price inclusive of all taxes, and consumer "
+            "care details. The same declarations must appear on an e-commerce listing before "
+            "the buyer completes the purchase.",
+            "Declarations must be legible, in a prescribed minimum size relative to the "
+            "package, and must not be affixed in a way that can be removed. Importers must "
+            "additionally declare the country of origin.",
+        ],
+    ),
+]
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Standards, quality and sector compliance
+# ══════════════════════════════════════════════════════════════════════════════════════
+STANDARDS: list[Record] = [
+    Record(
+        "BIS certification and Quality Control Orders", "Bureau of Indian Standards",
+        _d(2024, 4, 1), "eng", "standards", "engineering",
+        [
+            "Where a Quality Control Order applies to a product, it may not be manufactured, "
+            "imported, sold or stocked unless it carries the Standard Mark under a licence "
+            "from the Bureau of Indian Standards. Orders now cover a wide range of goods "
+            "including toys, footwear, electronics, chemicals and steel products.",
+            "A foreign manufacturer obtains a licence under the Foreign Manufacturers "
+            "Certification Scheme, which requires a factory assessment and a nominated "
+            "Indian representative. Goods arriving without the mark where an order applies "
+            "are liable to be denied clearance.",
+        ],
+    ),
+    Record(
+        "Food export registration and testing", "FSSAI", _d(2024, 4, 1),
+        "eng", "standards", "agriculture",
+        [
+            "An exporter of food products must hold an FSSAI licence and, for many "
+            "destinations, a health certificate issued against testing at a notified "
+            "laboratory. Requirements vary by destination market, and the importing "
+            "country's limits rather than domestic limits determine what may be shipped.",
+            "Consignments of certain products are subject to mandatory sampling before "
+            "export. A rejection at destination on residue or contamination grounds is "
+            "reported back and can lead to enhanced sampling for that exporter and product "
+            "combination.",
+        ],
+    ),
+    Record(
+        "Extended producer responsibility for packaging",
+        "Central Pollution Control Board", _d(2024, 4, 1), "eng", "standards", "any",
+        [
+            "A producer, importer or brand owner that introduces plastic packaging into the "
+            "market must register on the centralised portal and meet annual targets for "
+            "recycling, reuse and the use of recycled content. Obligations are calculated on "
+            "the quantity of packaging introduced in earlier years.",
+            "Targets are met by procuring certificates from registered recyclers. A shortfall "
+            "attracts an environmental compensation charge, and the obligation carries "
+            "forward rather than lapsing.",
+        ],
+    ),
+    Record(
+        "Pre-shipment inspection for specified goods", "DGFT", _d(2024, 4, 1),
+        "eng", "standards", "engineering",
+        [
+            "Certain imports, notably metallic waste and scrap, require a pre-shipment "
+            "inspection certificate from an agency recognised by DGFT, confirming that the "
+            "consignment is free of explosive material and radioactive contamination.",
+            "The certificate must accompany the consignment and be produced at clearance. "
+            "Import from a country where no recognised agency operates requires the "
+            "consignment to be inspected on arrival at a notified port instead.",
+        ],
+    ),
+]
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Trade policy, agreements and market access
+# ══════════════════════════════════════════════════════════════════════════════════════
+TRADE_POLICY: list[Record] = [
+    Record(
+        "Free trade agreements and rules of origin", "Department of Commerce",
+        _d(2024, 4, 1), "eng", "trade_agreements", "any",
+        [
+            "India has trade agreements with ASEAN, Japan, Korea, Australia, the United Arab "
+            "Emirates and others. Each grants tariff concessions on listed goods, and a "
+            "concession is available only where the goods satisfy that agreement's rules of "
+            "origin and the importer claims it with a valid certificate of origin.",
+            "Rules of origin typically require either a change in tariff classification, a "
+            "minimum regional value content, or both. Goods that merely undergo packing, "
+            "labelling or simple assembly in a partner country do not acquire origin there, "
+            "and a claim on such goods can be denied on verification.",
+        ],
+    ),
+    Record(
+        "Districts as Export Hubs", "DGFT", _d(2024, 4, 1),
+        "eng", "trade_promotion", "any",
+        [
+            "Each district has identified products with export potential, and a District "
+            "Export Promotion Committee prepares an action plan addressing the specific "
+            "constraints facing those products — testing facilities, packaging, logistics "
+            "or certification.",
+            "The initiative is aimed at first-time and small exporters who are close to "
+            "production but distant from the trade infrastructure that ports and metros "
+            "offer. Support is delivered through the district committee rather than through "
+            "a separate application.",
+        ],
+    ),
+    Record(
+        "Anti-dumping and safeguard measures", "DGTR", _d(2024, 4, 1),
+        "eng", "trade_remedies", "any",
+        [
+            "An anti-dumping duty may be imposed where goods are exported to India below "
+            "their normal value and that dumping causes injury to the domestic industry. The "
+            "duty is specific to the product, the country and often the individual exporter, "
+            "and is ordinarily imposed for five years.",
+            "A safeguard measure addresses a surge in imports irrespective of whether the "
+            "pricing is unfair, and applies to imports from all sources. A countervailing "
+            "duty addresses subsidies given by the exporting country. All three are "
+            "investigated by the Directorate General of Trade Remedies.",
+        ],
+    ),
+    Record(
+        "Special Economic Zones and Export Oriented Units", "Department of Commerce",
+        _d(2024, 4, 1), "eng", "schemes", "any",
+        [
+            "A unit in a Special Economic Zone may import goods without duty, and supplies "
+            "from the domestic area to the zone are treated as exports. The unit must "
+            "maintain positive net foreign exchange earnings measured cumulatively over five "
+            "years.",
+            "An Export Oriented Unit operates outside a zone but under similar obligations, "
+            "and may sell a permitted proportion of its output in the domestic area on "
+            "payment of applicable duties. Both require bonding of the premises and periodic "
+            "reporting to the development commissioner.",
+        ],
+    ),
+    Record(
+        "Foreign Trade Policy — status holder recognition", "DGFT", _d(2023, 4, 1),
+        "eng", "schemes", "any",
+        [
+            "Exporters are recognised as status holders based on export performance over the "
+            "current and three preceding years, in ascending grades from one star to five "
+            "star. Recognition is granted on the free-on-board value of exports in freely "
+            "convertible currency.",
+            "Status holders receive procedural benefits including self-certification of "
+            "origin for preferential exports, exemption from furnishing a bank guarantee in "
+            "several schemes, and priority in customs clearance. Export by a micro, small or "
+            "medium enterprise is given double weightage in computing performance.",
+        ],
+    ),
+]
+
+
+ALL_RECORDS: list[Record] = (
+    REGISTRATION + CUSTOMS + TAXATION + MSME + ECOMMERCE + STANDARDS + TRADE_POLICY
+)
+
+#: A handful of records carry a lifecycle state other than approved so the curation and
+#: conflict behaviours have something real to act on.
+SPECIAL: list[Record] = [
+    Record(
+        "Public Notice 41/2023 — Handicraft export status", "DGFT", _d(2023, 9, 12),
+        "eng", "classification", "handicrafts",
+        ["Handicraft items of wood are freely exportable and no licence is required for "
+         "shipments under this heading."],
+    ),
+    Record(
+        "Public Notice 07/2024 — Handicraft export status", "DGFT", _d(2024, 2, 20),
+        "eng", "classification", "handicrafts",
+        ["Handicraft items of wood are restricted and a licence is required for shipments "
+         "under this heading."],
+    ),
+    Record(
+        "Scheme guidelines — MSME export incentive", "Ministry of Commerce and Industry",
+        _d(2023, 1, 10), "eng", "schemes", "any",
+        ["Registered MSME exporters may claim an incentive of two per cent of free on board "
+         "value for eligible shipments, subject to an annual ceiling of fifty lakh rupees "
+         "per exporter."],
+        status="stale",
+    ),
+    Record(
+        "Draft circular — Revised duty on synthetic yarn", "CBIC", _d(2024, 8, 1),
+        "eng", "tariff", "textiles",
+        ["The basic customs duty on synthetic yarn is revised to seven per cent."],
+        status="pending_review",
+    ),
+    Record(
+        "अधिसूचना 12/2024 — प्रतिबंधित वस्तुओं का निर्यात लाइसेंस", "DGFT", _d(2024, 4, 1),
+        "hin", "licensing", "any",
+        ["अनुसूची 2 में सूचीबद्ध सभी प्रतिबंधित वस्तुओं के लिए निर्यात लाइसेंस आवश्यक है। "
+         "आवेदन डीजीएफटी पोर्टल के माध्यम से किए जाते हैं और सामान्यतः तीस कार्य दिवसों में "
+         "निर्णय लिया जाता है।",
+         "उद्यम पंजीकरण सूक्ष्म, लघु और मध्यम उद्यमों के लिए निःशुल्क और पूर्णतः ऑनलाइन है। "
+         "इसके लिए केवल आधार, पैन और जीएसटीआईएन की आवश्यकता होती है।"],
+    ),
+]
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Tariff and duty — the questions traders ask most often
+# ══════════════════════════════════════════════════════════════════════════════════════
+TARIFF_RECORDS: list[Record] = [
+    Record(
+        "Circular 08/2024 — Basic customs duty on cotton yarn", "CBIC", _d(2024, 6, 15),
+        "eng", "tariff", "textiles",
+        ["The basic customs duty on cotton yarn falling under heading 5205 is five per "
+         "cent ad valorem with effect from 1 July 2024, reduced from seven and a half "
+         "per cent."],
+    ),
+    Record(
+        "Notification 12/2024 — Export licensing of restricted goods", "DGFT",
+        _d(2024, 4, 1), "eng", "licensing", "any",
+        ["An export licence is required for all restricted goods listed in Schedule 2 of "
+         "the ITC HS classification. Applications are made through the DGFT portal and "
+         "are ordinarily decided within thirty working days.",
+         "Exporters holding a valid Importer Exporter Code may apply for a licence "
+         "online. A separate licence is required for each restricted item."],
+    ),
+    Record(
+        "Duty rates on textile and engineering headings", "CBIC", _d(2024, 4, 1),
+        "eng", "tariff", "any",
+        ["Woven cotton fabrics under heading 5208 attract ten per cent basic customs "
+         "duty. Iron and steel structures under heading 7308 attract seven and a half "
+         "per cent, as do machines with individual functions under heading 8479, which "
+         "may be imported at nil duty against an EPCG authorisation.",
+         "Rice under heading 1006 attracts nil basic customs duty on import, though "
+         "export restrictions apply separately to certain varieties. Pepper and dried "
+         "capsicum under heading 0904 attract thirty per cent."],
+    ),
+]
+
+ALL_RECORDS.extend(TARIFF_RECORDS)
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════
+# Schemes as answerable records
+#
+# These appear on the benefits page as things a business can claim, but a business that
+# asks "what is RoDTEP" wants an explanation, not an eligibility verdict. Without a
+# record behind each one the desk could list a scheme and then fail to describe it — and
+# two questions were being answered from a neighbouring record instead, which is worse
+# than admitting the gap.
+# ══════════════════════════════════════════════════════════════════════════════════════
+SCHEME_RECORDS: list[Record] = [
+    Record(
+        "RoDTEP — Remission of Duties and Taxes on Exported Products", "DGFT",
+        _d(2024, 3, 18), "eng", "schemes", "any",
+        [
+            "RoDTEP refunds the duties and taxes embedded in an exported product that no "
+            "other scheme returns — electricity duty, fuel levies, mandi tax and stamp "
+            "duty among them. The principle is that taxes should not be exported, and "
+            "RoDTEP covers what drawback and input tax credit leave behind.",
+            "The benefit is issued as a transferable electronic scrip credited against "
+            "the free-on-board value of the shipment, at a rate set for each tariff line. "
+            "The intent to claim must be declared on the shipping bill at the time of "
+            "export; it cannot be added afterwards, which is the most common way an "
+            "eligible exporter loses the benefit.",
+            "Exports from a Special Economic Zone, an Export Oriented Unit, or against an "
+            "Advance Authorisation are excluded, as is any product already receiving an "
+            "equivalent remission. Rates are revised periodically and are specific to the "
+            "eight-digit tariff line rather than to the exporter.",
+        ],
+    ),
+    Record(
+        "EPCG — Export Promotion Capital Goods authorisation", "DGFT", _d(2024, 7, 9),
+        "eng", "schemes", "engineering",
+        [
+            "An EPCG authorisation allows capital goods to be imported at nil basic "
+            "customs duty for pre-production, production or post-production use, against "
+            "a commitment to export. It is aimed at a manufacturer who needs machinery "
+            "the domestic market does not supply competitively.",
+            "The export obligation is six times the duty saved, to be met within six "
+            "years of the authorisation being issued — not from the date of first import. "
+            "It is over and above the exporter's average export performance in the "
+            "preceding three years, so the scheme rewards growth rather than existing "
+            "volume.",
+            "Manufacturer-exporters may apply, as may merchant exporters tied to a "
+            "supporting manufacturer. The authorisation must be obtained before the goods "
+            "are imported; machinery brought in first cannot be regularised afterwards. "
+            "Failure to meet the obligation makes the saved duty payable with interest.",
+        ],
+    ),
+    Record(
+        "Duty drawback on exported goods", "CBIC", _d(2024, 6, 28),
+        "eng", "schemes", "any",
+        [
+            "Duty drawback refunds the customs duty paid on inputs that went into a "
+            "product which is then exported. It is claimed on the shipping bill, and the "
+            "refund follows realisation of the export proceeds.",
+            "Most exporters claim at the All Industry Rate, a standard rate notified for "
+            "each tariff line that requires no proof of the actual duty paid. Where that "
+            "rate does not reflect the real incidence, a Brand Rate may be fixed for the "
+            "individual exporter on the strength of documented input consumption.",
+            "Drawback cannot be combined with an Advance Authorisation for the same "
+            "consignment, since both address the same duty. Where goods are re-exported "
+            "in the same form as imported, drawback of up to ninety-eight per cent of the "
+            "duty paid is available under a separate provision.",
+        ],
+    ),
+    Record(
+        "Advance Authorisation for duty-free inputs", "DGFT", _d(2023, 4, 1),
+        "eng", "schemes", "any",
+        [
+            "An Advance Authorisation permits inputs that are physically incorporated into "
+            "an export product to be imported without duty, including the normal wastage "
+            "of the process. Fuel, oil and catalysts consumed in producing the export "
+            "product are also covered.",
+            "Quantities are governed by Standard Input Output Norms where they exist for "
+            "the product; where none exist, ad hoc norms are fixed on application. A "
+            "minimum value addition must be achieved, and the authorisation carries an "
+            "actual user condition — the inputs cannot be sold on.",
+        ],
+    ),
+    Record(
+        "Interest equalisation on pre and post shipment export credit", "RBI",
+        _d(2024, 5, 2), "eng", "msme_finance", "any",
+        [
+            "The interest equalisation scheme reduces the interest an exporter pays on "
+            "rupee export credit, both before shipment and after it. The reduction is "
+            "applied by the lending bank, which then settles the difference with the "
+            "Reserve Bank, so there is nothing for the exporter to claim.",
+            "MSME manufacturer-exporters receive the benefit across all tariff lines; "
+            "other exporters receive it on a notified list of lines. An exporter should "
+            "check that the sanction letter names the scheme, because the reduction is "
+            "invisible otherwise and a bank that has not applied it will not volunteer so.",
+        ],
+    ),
+    Record(
+        "Market Access Initiative for overseas promotion",
+        "Ministry of Commerce and Industry", _d(2024, 4, 22), "eng", "trade_promotion",
+        "any",
+        [
+            "The Market Access Initiative funds a share of the cost of promoting Indian "
+            "products abroad — taking part in an approved trade fair, a buyer-seller "
+            "meet, or a market study. Support covers stall charges, freight of exhibits "
+            "and, for eligible participants, travel.",
+            "Applications are routed through an Export Promotion Council or a recognised "
+            "trade body rather than made directly, and must be filed well before the "
+            "event. First-time participants and units from the north-eastern region are "
+            "given preference.",
+        ],
+    ),
+    Record(
+        "Realisation and repatriation of export proceeds", "RBI", _d(2024, 4, 1),
+        "eng", "payments", "any",
+        [
+            "Money from an export must be brought back into India within nine months of "
+            "the date of shipment. Getting paid abroad and leaving the funds there does "
+            "not satisfy the requirement — the proceeds must be repatriated and "
+            "surrendered to an authorised dealer bank.",
+            "Where payment is delayed beyond that period, the exporter applies to the "
+            "authorised dealer bank for an extension, with reasons. Repeated failure to "
+            "bring proceeds back can lead to the exporter being placed on a caution list, "
+            "after which further exports require advance payment or a letter of credit.",
+        ],
+    ),
+]
+
+ALL_RECORDS.extend(SCHEME_RECORDS)

@@ -1,0 +1,98 @@
+/**
+ * Design tokens (lld-frontend.md §19).
+ *
+ * Two things here are load-bearing rather than cosmetic:
+ *
+ * 1. The type scale keys on **script**, not language. Hindi and Marathi share
+ *    Devanagari, so keying on language would need both listed and would silently miss
+ *    any future Devanagari language. `data-script` is set from the server-served
+ *    language map at exactly one call site.
+ *
+ * 2. The provisional-region treatment is a token, not a per-surface choice. It is the
+ *    one visual treatment in the product with a correctness meaning attached: amber
+ *    would imply an error where none exists, and plain grey would be indistinguishable
+ *    from committed text.
+ */
+
+:root {
+  /* Colour — semantic roles. Note the absence of an `error` red for the
+     `not-an-error` category: no-answer and assist-unavailable must never look broken. */
+  --color-surface: #ffffff;
+  --color-surface-raised: #f7f8fa;
+  --color-content: #14181f;
+  --color-content-muted: #5b6472;
+  --color-border: #d8dde5;
+  --color-border-subtle: #e8ecf1;
+  --color-info: #1f5fbf;
+  --color-caution: #8a6410;      /* stale / review-pending */
+  --color-conflict: #6b3fa0;     /* sources disagree — not an error */
+  --color-success: #1c6b45;
+  --color-danger: #a32020;       /* genuine failures only */
+
+  /* Spacing — 4px base */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  /* Type — Latin defaults, overridden per script below */
+  --font-size-body: 1rem;
+  --line-height-body: 1.5;
+  --font-size-small: 0.875rem;
+  --line-height-small: 1.45;
+  --font-family-body: 'Noto Sans', system-ui, sans-serif;
+
+  /* Radii, shadow, motion */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --shadow-raised: 0 1px 3px rgb(20 24 31 / 12%);
+  --duration-base: 140ms;
+
+  /* Provisional answer region — see note 2 above */
+  --answer-provisional-opacity: 0.62;
+  --answer-provisional-rule: 2px solid var(--color-border-subtle);
+}
+
+/* Indic scripts need more vertical space than Latin at the same nominal size. A layout
+   tuned only on English breaks visibly in Hindi; this is where that is prevented. */
+:root[data-script='devanagari'] {
+  --font-size-body: 1.0625rem;
+  --line-height-body: 1.75;
+  --line-height-small: 1.7;
+  --font-family-body: 'Noto Sans Devanagari', system-ui, sans-serif;
+}
+:root[data-script='bengali'] {
+  --font-size-body: 1.0625rem;
+  --line-height-body: 1.75;
+  --line-height-small: 1.7;
+  --font-family-body: 'Noto Sans Bengali', system-ui, sans-serif;
+}
+:root[data-script='tamil'] {
+  --font-size-body: 1.0625rem;
+  --line-height-body: 1.8;
+  --line-height-small: 1.72;
+  --font-family-body: 'Noto Sans Tamil', system-ui, sans-serif;
+}
+:root[data-script='telugu'] {
+  --font-size-body: 1.0625rem;
+  --line-height-body: 1.8;
+  --line-height-small: 1.72;
+  --font-family-body: 'Noto Sans Telugu', system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-content);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
+
+/* All spacing uses logical properties so future Urdu (RTL) is a token change, not a
+   rewrite. There is no RTL script in the launch six, which is exactly why this costs
+   nothing to do now and would cost a great deal to retrofit. */
+.stack > * + * { margin-block-start: var(--space-3); }
+.inline-gap > * + * { margin-inline-start: var(--space-2); }

@@ -1,0 +1,1050 @@
+{
+  "project": "smart-contact-center-knowledge-platform",
+  "scope": "fullstack",
+  "stage": 7,
+  "source": "planning.md v1.0",
+  "task_count": 43,
+  "stage_count": 16,
+  "critical_path": [
+    "TASK-01",
+    "TASK-02",
+    "TASK-03",
+    "TASK-07",
+    "TASK-14",
+    "TASK-15",
+    "TASK-21",
+    "TASK-28",
+    "TASK-30",
+    "TASK-32",
+    "TASK-33",
+    "TASK-36",
+    "TASK-37",
+    "TASK-43"
+  ],
+  "tasks": [
+    {
+      "id": "TASK-01",
+      "name": "Repository scaffold and configuration tiers",
+      "stage": 1,
+      "depends_on": [],
+      "dependency_type": "Independent",
+      "files": [
+        "backend/app/core/config.py",
+        "backend/app/core/logging.py",
+        "backend/pyproject.toml",
+        "docker-compose.yml",
+        "frontend/package.json",
+        "frontend/vite.config.ts"
+      ],
+      "guardrails": [
+        "G6",
+        "G10"
+      ],
+      "requirements": [],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-02",
+      "name": "Migration: identity and taxonomy",
+      "stage": 2,
+      "depends_on": [
+        "TASK-01"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/alembic/versions/001_identity_taxonomy.py"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-003",
+        "REQ-013"
+      ],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-06",
+      "name": "Domain state machines and exception hierarchies",
+      "stage": 2,
+      "depends_on": [
+        "TASK-01"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/domain/state.py",
+        "backend/app/domain/errors.py"
+      ],
+      "guardrails": [
+        "G8",
+        "G9"
+      ],
+      "requirements": [
+        "REQ-007",
+        "REQ-010"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-10",
+      "name": "Model clients, strategies and circuit breaker",
+      "stage": 2,
+      "depends_on": [
+        "TASK-01"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/models/embedding.py",
+        "backend/app/models/rerank.py",
+        "backend/app/models/generation.py",
+        "backend/app/models/ocr.py",
+        "backend/app/models/pii.py",
+        "backend/app/models/langdetect.py",
+        "backend/app/models/breaker.py"
+      ],
+      "guardrails": [
+        "G4"
+      ],
+      "requirements": [
+        "REQ-001",
+        "REQ-004",
+        "REQ-015"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-29",
+      "name": "Frontend scaffold, tokens and i18n",
+      "stage": 2,
+      "depends_on": [
+        "TASK-01"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/entries/assistant.tsx",
+        "frontend/src/entries/agent.tsx",
+        "frontend/src/entries/curation.tsx",
+        "frontend/src/shared/tokens/index.css",
+        "frontend/src/shared/i18n/index.ts"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-001"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-03",
+      "name": "Migration: knowledge core",
+      "stage": 3,
+      "depends_on": [
+        "TASK-02"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/alembic/versions/002_knowledge.py"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-04",
+      "name": "Migration: conversation, presence, assignment",
+      "stage": 3,
+      "depends_on": [
+        "TASK-02"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/alembic/versions/003_conversation.py",
+        "backend/app/db/partitions.py"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-006",
+        "REQ-007",
+        "REQ-008"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-05",
+      "name": "Migration: audit, analytics, gaps, privacy, grants",
+      "stage": 4,
+      "depends_on": [
+        "TASK-03",
+        "TASK-04"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/alembic/versions/004_audit_analytics.py",
+        "backend/alembic/versions/005_grants.py"
+      ],
+      "guardrails": [
+        "G1"
+      ],
+      "requirements": [
+        "REQ-011",
+        "REQ-012",
+        "REQ-014",
+        "REQ-015"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-07",
+      "name": "Knowledge, chunk and answer repositories",
+      "stage": 4,
+      "depends_on": [
+        "TASK-03",
+        "TASK-06"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/repositories/knowledge.py",
+        "backend/app/repositories/chunk.py",
+        "backend/app/repositories/answer.py"
+      ],
+      "guardrails": [
+        "G2"
+      ],
+      "requirements": [
+        "REQ-004",
+        "REQ-010"
+      ],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-08",
+      "name": "Conversation, presence, queue, assignment, assist repositories",
+      "stage": 4,
+      "depends_on": [
+        "TASK-04",
+        "TASK-06"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/repositories/conversation.py",
+        "backend/app/repositories/presence.py",
+        "backend/app/repositories/queue.py",
+        "backend/app/repositories/assignment.py",
+        "backend/app/repositories/assist.py"
+      ],
+      "guardrails": [
+        "G7"
+      ],
+      "requirements": [
+        "REQ-006",
+        "REQ-008"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-16",
+      "name": "SSE channel service and event schemas",
+      "stage": 4,
+      "depends_on": [
+        "TASK-01",
+        "TASK-06"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/sse.py",
+        "backend/app/schemas/events.py"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-006",
+        "REQ-007",
+        "REQ-008"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-09",
+      "name": "Gap, audit, analytics and user repositories",
+      "stage": 5,
+      "depends_on": [
+        "TASK-05",
+        "TASK-06"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/repositories/gap.py",
+        "backend/app/repositories/audit.py",
+        "backend/app/repositories/analytics.py",
+        "backend/app/repositories/user.py"
+      ],
+      "guardrails": [
+        "G1"
+      ],
+      "requirements": [
+        "REQ-011",
+        "REQ-012",
+        "REQ-013",
+        "REQ-014"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-14",
+      "name": "Generation counter and answer cache",
+      "stage": 5,
+      "depends_on": [
+        "TASK-07"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/generation_counter.py",
+        "backend/app/services/answer_cache.py"
+      ],
+      "guardrails": [
+        "G3"
+      ],
+      "requirements": [
+        "REQ-010"
+      ],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-11",
+      "name": "Authentication service and endpoints",
+      "stage": 6,
+      "depends_on": [
+        "TASK-09",
+        "TASK-06"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/auth.py",
+        "backend/app/api/v1/auth.py"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-013"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-13",
+      "name": "Audit writer and masker",
+      "stage": 6,
+      "depends_on": [
+        "TASK-09",
+        "TASK-10"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/audit.py",
+        "backend/app/services/masking.py"
+      ],
+      "guardrails": [
+        "G1",
+        "G10"
+      ],
+      "requirements": [
+        "REQ-014",
+        "REQ-015"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-12",
+      "name": "Authorisation service and permission matrix",
+      "stage": 7,
+      "depends_on": [
+        "TASK-09",
+        "TASK-13"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/authz.py",
+        "backend/app/api/deps.py"
+      ],
+      "guardrails": [
+        "G14"
+      ],
+      "requirements": [
+        "REQ-013"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-15",
+      "name": "Answer service orchestration",
+      "stage": 7,
+      "depends_on": [
+        "TASK-07",
+        "TASK-10",
+        "TASK-13",
+        "TASK-14"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/answer.py",
+        "backend/app/services/grounding.py",
+        "backend/app/services/conflict.py"
+      ],
+      "guardrails": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ],
+      "requirements": [
+        "REQ-001",
+        "REQ-004",
+        "REQ-005"
+      ],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-17",
+      "name": "Knowledge lifecycle service and endpoints",
+      "stage": 8,
+      "depends_on": [
+        "TASK-07",
+        "TASK-12",
+        "TASK-13",
+        "TASK-14"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/knowledge.py",
+        "backend/app/api/v1/knowledge.py"
+      ],
+      "guardrails": [
+        "G7",
+        "G8"
+      ],
+      "requirements": [
+        "REQ-009",
+        "REQ-010"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-19",
+      "name": "Taxonomy, languages, coverage and thresholds endpoints",
+      "stage": 8,
+      "depends_on": [
+        "TASK-07",
+        "TASK-12"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/api/v1/taxonomy.py",
+        "backend/app/api/v1/languages.py",
+        "backend/app/api/v1/coverage.py",
+        "backend/app/api/v1/thresholds.py",
+        "backend/app/services/coverage.py"
+      ],
+      "guardrails": [
+        "G6"
+      ],
+      "requirements": [
+        "REQ-001",
+        "REQ-003",
+        "REQ-023"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-21",
+      "name": "Assist service and agent endpoints",
+      "stage": 8,
+      "depends_on": [
+        "TASK-08",
+        "TASK-15",
+        "TASK-12",
+        "TASK-13"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/assist.py",
+        "backend/app/api/v1/conversations.py"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-006",
+        "REQ-014"
+      ],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-22",
+      "name": "Handover, assignment engine and presence",
+      "stage": 8,
+      "depends_on": [
+        "TASK-08",
+        "TASK-16",
+        "TASK-13"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/handover.py",
+        "backend/app/services/assignment.py",
+        "backend/app/services/presence.py",
+        "backend/app/api/v1/queue.py"
+      ],
+      "guardrails": [
+        "G7"
+      ],
+      "requirements": [
+        "REQ-008"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-23",
+      "name": "Gap service and clustering job",
+      "stage": 8,
+      "depends_on": [
+        "TASK-09",
+        "TASK-10",
+        "TASK-12"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/gaps.py",
+        "backend/app/jobs/clustering.py",
+        "backend/app/api/v1/gaps.py"
+      ],
+      "guardrails": [
+        "G12"
+      ],
+      "requirements": [
+        "REQ-011"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-24",
+      "name": "Analytics service, rollup job and guardrails",
+      "stage": 8,
+      "depends_on": [
+        "TASK-09",
+        "TASK-12"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/analytics.py",
+        "backend/app/jobs/rollup.py",
+        "backend/app/api/v1/analytics.py"
+      ],
+      "guardrails": [
+        "G12"
+      ],
+      "requirements": [
+        "REQ-012"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-25",
+      "name": "Privacy service and admin user management",
+      "stage": 8,
+      "depends_on": [
+        "TASK-09",
+        "TASK-12",
+        "TASK-13"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/privacy.py",
+        "backend/app/services/users.py",
+        "backend/app/api/v1/admin.py"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-013",
+        "REQ-015"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-18",
+      "name": "Ingestion orchestrator and stage handlers",
+      "stage": 9,
+      "depends_on": [
+        "TASK-07",
+        "TASK-10",
+        "TASK-17"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/ingestion/orchestrator.py",
+        "backend/app/ingestion/stages/extract.py",
+        "backend/app/ingestion/stages/ocr.py",
+        "backend/app/ingestion/stages/metadata.py",
+        "backend/app/ingestion/stages/duplicate.py",
+        "backend/app/ingestion/stages/chunk.py",
+        "backend/app/ingestion/stages/embed.py",
+        "backend/app/api/v1/ingestion.py"
+      ],
+      "guardrails": [
+        "G12"
+      ],
+      "requirements": [
+        "REQ-002",
+        "REQ-003"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-20",
+      "name": "Conversation service and public endpoints",
+      "stage": 9,
+      "depends_on": [
+        "TASK-08",
+        "TASK-15",
+        "TASK-16",
+        "TASK-19"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/services/conversation.py",
+        "backend/app/api/v1/public.py"
+      ],
+      "guardrails": [
+        "G5",
+        "G8"
+      ],
+      "requirements": [
+        "REQ-007",
+        "REQ-023"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-26",
+      "name": "Scheduled job runner",
+      "stage": 10,
+      "depends_on": [
+        "TASK-17",
+        "TASK-22",
+        "TASK-23",
+        "TASK-24",
+        "TASK-25"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/jobs/schedule.py",
+        "backend/app/jobs/staleness.py",
+        "backend/app/jobs/inactivity.py",
+        "backend/app/jobs/presence_expiry.py",
+        "backend/app/jobs/reconciliation.py",
+        "backend/app/jobs/masking_sample.py",
+        "backend/app/jobs/retention.py"
+      ],
+      "guardrails": [
+        "G12"
+      ],
+      "requirements": [
+        "REQ-007",
+        "REQ-010",
+        "REQ-015"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-27",
+      "name": "Observability: metrics, correlation, alerts",
+      "stage": 10,
+      "depends_on": [
+        "TASK-15",
+        "TASK-18",
+        "TASK-22"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/app/core/metrics.py",
+        "backend/app/core/middleware.py",
+        "ops/alerts.yml"
+      ],
+      "guardrails": [
+        "G10",
+        "G11"
+      ],
+      "requirements": [],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-28",
+      "name": "OpenAPI export and client generation",
+      "stage": 10,
+      "depends_on": [
+        "TASK-11",
+        "TASK-17",
+        "TASK-19",
+        "TASK-20",
+        "TASK-21",
+        "TASK-22",
+        "TASK-23",
+        "TASK-24",
+        "TASK-25"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "backend/scripts/export_openapi.py",
+        ".github/workflows/contract.yml"
+      ],
+      "guardrails": [],
+      "requirements": [],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-30",
+      "name": "API client, SSE wrapper, error normalisation, broadcast bus",
+      "stage": 11,
+      "depends_on": [
+        "TASK-28",
+        "TASK-29"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/shared/api/client.ts",
+        "frontend/src/shared/api/sse.ts",
+        "frontend/src/shared/api/errors.ts",
+        "frontend/src/shared/api/broadcast.ts"
+      ],
+      "guardrails": [
+        "G15"
+      ],
+      "requirements": [],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-31",
+      "name": "Auth shell and route guards",
+      "stage": 12,
+      "depends_on": [
+        "TASK-30"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/features/auth/useAuth.ts",
+        "frontend/src/app/routes/guards.tsx"
+      ],
+      "guardrails": [
+        "G14"
+      ],
+      "requirements": [
+        "REQ-013"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-32",
+      "name": "Shared answer primitives",
+      "stage": 12,
+      "depends_on": [
+        "TASK-30"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/features/answer/components/CitationCard.tsx",
+        "frontend/src/features/answer/components/ConfidenceMeter.tsx",
+        "frontend/src/features/answer/components/ConflictPanel.tsx",
+        "frontend/src/features/answer/components/NoAnswerPanel.tsx",
+        "frontend/src/features/answer/map.ts"
+      ],
+      "guardrails": [
+        "G5"
+      ],
+      "requirements": [
+        "REQ-004",
+        "REQ-005",
+        "REQ-010"
+      ],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-33",
+      "name": "Answer streaming hooks",
+      "stage": 13,
+      "depends_on": [
+        "TASK-30",
+        "TASK-32"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/features/answer/hooks/useConversationChannel.ts",
+        "frontend/src/features/answer/hooks/useAnswerStream.ts"
+      ],
+      "guardrails": [
+        "G4"
+      ],
+      "requirements": [
+        "REQ-004",
+        "REQ-006",
+        "REQ-007"
+      ],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-38",
+      "name": "Curation console",
+      "stage": 13,
+      "depends_on": [
+        "TASK-31",
+        "TASK-32",
+        "TASK-30"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/surfaces/curation/index.tsx",
+        "frontend/src/features/knowledge/ItemTable.tsx",
+        "frontend/src/features/knowledge/ItemDetail.tsx",
+        "frontend/src/features/knowledge/ClassificationEditor.tsx",
+        "frontend/src/features/knowledge/LifecycleActions.tsx"
+      ],
+      "guardrails": [
+        "G15"
+      ],
+      "requirements": [
+        "REQ-003",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-34",
+      "name": "Customer assistant surface",
+      "stage": 14,
+      "depends_on": [
+        "TASK-33",
+        "TASK-29"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/surfaces/assistant/index.tsx",
+        "frontend/src/features/conversation/AskComposer.tsx",
+        "frontend/src/features/conversation/LanguageSwitcher.tsx"
+      ],
+      "guardrails": [
+        "G5"
+      ],
+      "requirements": [
+        "REQ-001",
+        "REQ-007",
+        "REQ-023"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-36",
+      "name": "Agent console",
+      "stage": 14,
+      "depends_on": [
+        "TASK-33",
+        "TASK-31"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/surfaces/agent/index.tsx",
+        "frontend/src/features/assist/AssistPanel.tsx",
+        "frontend/src/features/assist/ReplyComposer.tsx"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-006",
+        "REQ-014"
+      ],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-39",
+      "name": "Ingestion UI",
+      "stage": 14,
+      "depends_on": [
+        "TASK-38"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/features/ingestion/UploadDropzone.tsx",
+        "frontend/src/features/ingestion/IngestionStatusList.tsx"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-002"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-40",
+      "name": "Gap queue UI",
+      "stage": 14,
+      "depends_on": [
+        "TASK-38"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/features/gaps/GapQueue.tsx",
+        "frontend/src/features/gaps/ResolveDialog.tsx"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-011"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-41",
+      "name": "Analytics UI",
+      "stage": 14,
+      "depends_on": [
+        "TASK-38"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/features/analytics/AnalyticsDashboard.tsx",
+        "frontend/src/features/analytics/GuardrailTile.tsx"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-012"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-42",
+      "name": "Admin UI",
+      "stage": 14,
+      "depends_on": [
+        "TASK-38"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/features/admin/AdminPanel.tsx"
+      ],
+      "guardrails": [
+        "G6"
+      ],
+      "requirements": [
+        "REQ-001",
+        "REQ-013",
+        "REQ-015",
+        "REQ-023"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-35",
+      "name": "Handover UI",
+      "stage": 15,
+      "depends_on": [
+        "TASK-34"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/features/handover/HandoverBanner.tsx",
+        "frontend/src/features/handover/CallbackForm.tsx"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-008"
+      ],
+      "critical_path": false,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-37",
+      "name": "Presence and assignment feed",
+      "stage": 15,
+      "depends_on": [
+        "TASK-36"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "frontend/src/features/presence/usePresence.ts",
+        "frontend/src/features/presence/useAssignmentFeed.ts"
+      ],
+      "guardrails": [],
+      "requirements": [
+        "REQ-008",
+        "REQ-010"
+      ],
+      "critical_path": true,
+      "status": "pending"
+    },
+    {
+      "id": "TASK-43",
+      "name": "Deployment assembly",
+      "stage": 16,
+      "depends_on": [
+        "TASK-26",
+        "TASK-27",
+        "TASK-34",
+        "TASK-35",
+        "TASK-36",
+        "TASK-37",
+        "TASK-39",
+        "TASK-40",
+        "TASK-41",
+        "TASK-42"
+      ],
+      "dependency_type": "Hard Dependency",
+      "files": [
+        "docker-compose.prod.yml",
+        "ops/systemd/api.service",
+        "ops/systemd/worker.service",
+        "ops/systemd/model.service",
+        "ops/Caddyfile",
+        ".github/workflows/deploy.yml"
+      ],
+      "guardrails": [
+        "G13"
+      ],
+      "requirements": [],
+      "critical_path": true,
+      "status": "pending"
+    }
+  ]
+}

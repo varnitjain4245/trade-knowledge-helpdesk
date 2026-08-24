@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workflow Dashboard — PRD to Prod Pipeline</title>
+  <meta name="description" content="Real-time SDLC workflow monitoring dashboard with live CLI metrics" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-brand">
+      <div class="header-logo">⚡</div>
+      <div>
+        <div class="header-title">WORKFLOW OPS</div>
+        <div class="header-subtitle">PRD-to-Prod Pipeline Monitor</div>
+      </div>
+    </div>
+    <div class="header-status">
+      <span><span class="live-dot"></span>&nbsp; LIVE REFRESH 2s</span>
+      <span id="elapsed-timer">—</span>
+      <span id="last-refresh">—</span>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- Pipeline Stepper -->
+    <section class="pipeline">
+      <div class="pipeline-label">7-Stage SDLC Pipeline</div>
+      <div class="pipeline-track" id="pipeline-track"></div>
+    </section>
+
+    <!-- Stat Cards -->
+    <section class="stats-grid" id="stats-grid"></section>
+
+    <!-- Stage Detail Table -->
+    <section class="stage-table" id="stage-table"></section>
+
+    <!-- Charts -->
+    <section class="charts-section" id="charts-section"></section>
+
+    <!-- Bottom Grid: Timeline + Artifact -->
+    <section class="bottom-grid">
+      <div class="timeline-section" id="timeline-section"></div>
+      <div class="artifact-section" id="artifact-section">
+        <div class="artifact-header">
+          <span>Artifact Preview</span>
+        </div>
+        <div class="artifact-empty" id="artifact-empty">
+          Click any stage's artifact link to preview it inline here.
+        </div>
+        <div class="artifact-body" id="artifact-body" style="display:none;"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

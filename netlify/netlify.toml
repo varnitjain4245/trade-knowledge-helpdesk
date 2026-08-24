@@ -1,0 +1,22 @@
+# Static site plus two functions. There is no build step: the page is hand-written and
+# the functions are plain ES modules, so nothing is compiled and nothing can drift
+# between what was tested and what is served.
+
+[build]
+  publish = "site"
+  functions = "functions"
+
+[functions]
+  node_bundler = "esbuild"
+  # corpus.json is imported by the retrieval module and must travel with the bundle.
+  included_files = ["lib/**"]
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    # The page talks only to its own origin. A compromised dependency cannot send a
+    # question anywhere else, and the microphone is limited to this document.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; base-uri 'none'; form-action 'none'"
+    Permissions-Policy = "microphone=(self), camera=(), geolocation=()"

@@ -1,0 +1,16 @@
+{
+  "answer.noReliableAnswer": "I don't have a reliable answer for this.",
+  "answer.relatedReading": "Related material you may find useful",
+  "answer.sourcesDiffer": "The available sources give different answers.",
+  "answer.reviewPending": "This source is due for review",
+  "answer.source": "Source",
+  "answer.verifying": "Checking this answer against its sources",
+  "assist.unavailable": "Suggestions are unavailable. The conversation is unaffected.",
+  "handover.offer": "Would you like to speak to a person?",
+  "handover.queuePosition": "You are number {{position}} in the queue",
+  "handover.callbackOffer": "The wait is longer than usual. We can call you back instead.",
+  "coverage.closed": "The assistant is not open yet. We'll connect you to a person.",
+  "fairUse.reached": "You've reached the question limit for now. You can still speak to a person.",
+  "language.supported": "Supported languages",
+  "language.inPreparation": "Support for this language is in preparation."
+}

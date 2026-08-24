@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en" data-script="latin">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trade Knowledge Helpdesk</title>
+<meta name="description" content="Cited answers on export licensing, customs, GST, MSME schemes and e-commerce rules — spoken or typed, in your language.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%232f2a86'/%3E%3Crect x='8' y='9' width='16' height='2.5' fill='%23f4b731'/%3E%3Crect x='8' y='15' width='16' height='2.5' fill='%23fff'/%3E%3Crect x='8' y='21' width='10' height='2.5' fill='%2317a06e'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans+Devanagari:wght@400;500;600&family=IBM+Plex+Sans+Tamil:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --indigo:#2f2a86; --indigo-2:#443ca6; --indigo-wash:#eeedf8;
+  --saffron:#f4b731; --seal:#1b5e4b; --seal-wash:#eef5f1;
+  --endorse:#a8641c; --endorse-wash:#fbf3e8;
+  --dispute:#6b4a9e; --dispute-wash:#f3effa;
+  --ink:#1b2432; --ink-2:#414c5c; --ink-3:#6b7787;
+  --rule:#d5dae1; --rule-2:#e9ecf0;
+  --sans:'IBM Plex Sans','IBM Plex Sans Devanagari',system-ui,sans-serif;
+  --cond:'IBM Plex Sans Condensed',var(--sans);
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --line:1.55;
+}
+[data-script="devanagari"]{--line:1.78}
+[data-script="tamil"]{--line:1.8}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:var(--line);-webkit-font-smoothing:antialiased}
+:focus-visible{outline:3px solid var(--saffron);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.wrap{max-width:840px;margin:0 auto;padding-inline:20px}
+
+header{background:var(--indigo);color:#fff;padding-block:26px 30px}
+header .eyebrow{font-family:var(--cond);font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:#b9b4e4}
+header h1{font-size:clamp(23px,4.4vw,32px);font-weight:600;letter-spacing:-.02em;margin:6px 0 8px}
+header p{margin:0;color:#d7d4ef;max-width:56ch;font-size:15px}
+
+/* The call button is the page's thesis: this desk is meant to be spoken to. */
+.callzone{background:var(--indigo-2);padding-block:22px 26px}
+.callzone .wrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+button.call{
+  all:unset;cursor:pointer;display:flex;align-items:center;gap:13px;
+  background:#fff;color:var(--indigo);border-radius:999px;padding:15px 26px 15px 20px;
+  font-size:17px;font-weight:600;box-shadow:0 6px 22px rgba(16,20,60,.3);
+}
+button.call:hover{transform:translateY(-1px)}
+button.call svg{width:22px;height:22px}
+button.call[aria-pressed="true"]{background:#b3261e;color:#fff;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(179,38,30,.5)}
+                 60%{box-shadow:0 0 0 16px rgba(179,38,30,0)}}
+.callzone .hint{color:#cfcbe9;font-size:13.5px;max-width:34ch}
+.turnstate{display:flex;align-items:center;gap:10px;color:#fff;font-size:14px;
+  background:rgba(255,255,255,.13);padding:9px 15px;border-radius:999px}
+.turnstate .pip{width:10px;height:10px;border-radius:50%;background:#fff;flex:none}
+.turnstate.listening .pip{background:#ff8a80;animation:pulse 1.1s ease-in-out infinite}
+.turnstate.thinking .pip{background:var(--saffron);animation:pulse 1.5s ease-in-out infinite}
+.turnstate.speaking .pip{background:#7ee2b8;animation:pulse 1.5s ease-in-out infinite}
+
+main{padding-block:24px 60px}
+.composer{display:flex;gap:8px;margin-bottom:8px}
+.composer input{flex:1;padding:13px 15px;border:1px solid var(--rule);border-radius:9px;
+  font:inherit;font-size:15px}
+.composer input:focus{border-color:var(--indigo);outline:none}
+button.go{all:unset;cursor:pointer;background:var(--ink);color:#fff;padding:13px 22px;
+  border-radius:9px;font-weight:500}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+select,button.chip-btn{font:inherit;font-size:13px;padding:7px 11px;border:1px solid var(--rule);
+  border-radius:7px;background:#fff;color:var(--ink-2);cursor:pointer}
+button.chip-btn.on{background:var(--seal);color:#fff;border-color:var(--seal)}
+.prompts{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:22px}
+button.prompt{all:unset;cursor:pointer;font-size:13px;color:var(--ink-2);border:1px solid var(--rule);
+  border-radius:999px;padding:6px 13px}
+button.prompt:hover{border-color:var(--indigo);color:var(--indigo);background:var(--indigo-wash)}
+
+.turn{margin-bottom:20px}
+.q{background:var(--ink);color:#fff;padding:11px 15px;border-radius:12px 12px 3px 12px;
+  margin-left:auto;width:fit-content;max-width:85%;font-size:14.5px}
+.a{margin-top:10px;padding:14px 16px;border-radius:12px 12px 12px 3px;
+  border:1px solid var(--rule);border-left:3px solid var(--seal);background:var(--seal-wash)}
+.a.no_answer{border-left-color:var(--ink-3);background:#f5f6f8}
+.a.conflict{border-left-color:var(--dispute);background:var(--dispute-wash)}
+.a.thinking{border-left-color:var(--rule);background:#fafbfc;color:var(--ink-3);font-style:italic}
+
+/* The citation slip — the one element this product is remembered by. */
+.slip{border:1px solid var(--rule);border-left:3px solid var(--seal);background:#fff;
+  border-radius:0 7px 7px 0;padding:11px 13px;margin-top:11px;position:relative}
+.slip.endorsed{border-left-color:var(--endorse)}
+.slip.disputed{border-left-color:var(--dispute)}
+.slip .prov{font-family:var(--mono);font-size:11px;color:var(--ink-3);
+  display:flex;flex-wrap:wrap;gap:4px 10px;margin-bottom:7px}
+.slip .prov b{color:var(--ink-2);font-weight:500}
+.slip.endorsed .prov{padding-inline-end:104px}
+.slip .passage{font-size:14px}
+.stamp{position:absolute;top:9px;right:-2px;transform:rotate(-4deg);
+  font-family:var(--cond);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--endorse);border:1.5px solid var(--endorse);border-radius:2px;
+  padding:2px 7px;background:var(--endorse-wash)}
+.band{display:flex;align-items:center;gap:10px;margin:12px 0 2px;font-family:var(--cond);
+  font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dispute)}
+.band::before,.band::after{content:'';height:1px;background:#ddd3f0;flex:1}
+.meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.tag{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:3px;
+  border:1px solid var(--rule);color:var(--ink-3)}
+.tag.ok{border-color:#bcd6c9;color:var(--seal);background:var(--seal-wash)}
+.tag.warn{border-color:#e6cfae;color:var(--endorse);background:var(--endorse-wash)}
+
+.empty{color:var(--ink-3);font-size:14px;padding:14px 0 4px}
+footer{border-top:1px solid var(--rule);padding-block:22px 40px;color:var(--ink-3);font-size:12.5px}
+footer p{margin:0 0 7px;max-width:70ch;line-height:1.6}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);
+  color:#fff;padding:11px 18px;border-radius:8px;font-size:13.5px;z-index:40;max-width:90vw}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Ministry of Commerce &amp; Industry · prototype</div>
+    <h1>Trade Knowledge Helpdesk</h1>
+    <p>Ask about export licensing, customs, GST, MSME schemes or e-commerce rules. Every
+       answer quotes the record it came from. When nothing covers your question, the desk
+       says so rather than guessing.</p>
+  </div>
+</header>
+
+<div class="callzone">
+  <div class="wrap">
+    <button class="call" id="call" onclick="toggleCall()" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11 11 0 0 0 3.5.55 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11 11 0 0 0 .55 3.5 1 1 0 0 1-.25 1z"
+              stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      </svg>
+      <span id="call-label">Talk to the desk</span>
+    </button>
+    <span class="hint" id="call-hint">Speak your question and hear the answer. Say
+      “stop” to end.</span>
+    <span class="turnstate" id="turnstate" hidden></span>
+  </div>
+</div>
+
+<main class="wrap">
+  <form class="composer" onsubmit="submitTyped(event)">
+    <input type="text" id="q" placeholder="…or type your question here" autocomplete="off"
+           aria-label="Your question">
+    <button class="go" type="submit">Ask</button>
+  </form>
+  <div class="controls">
+    <select id="lang" onchange="onLangChange()" aria-label="Language">
+      <option value="eng">English</option>
+      <option value="hin">हिन्दी</option>
+      <option value="ben">বাংলা</option>
+      <option value="tam">தமிழ்</option>
+      <option value="tel">తెలుగు</option>
+      <option value="mar">मराठी</option>
+    </select>
+    <button class="chip-btn" id="speak-btn" onclick="toggleSpeak()" aria-pressed="false">
+      🔇 Silent</button>
+  </div>
+  <div class="prompts" id="prompts"></div>
+  <div id="log"></div>
+</main>
+
+<footer class="wrap">
+  <p><b>How this works.</b> Answers are drawn only from an indexed set of records, and
+     each is quoted with its issuing authority and date. Where a model drafts the wording,
+     the draft is checked against those records first and discarded if it says anything
+     they do not support.</p>
+  <p>Prototype for the Smart India Hackathon. The records, rates and scheme figures are
+     illustrative — check the published notification before acting on a figure.</p>
+</footer>
+
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c =>
+  ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+
+const SCRIPT = { eng:'latin', hin:'devanagari', mar:'devanagari', ben:'bengali',
+                 tam:'tamil', tel:'telugu' };
+const BCP = { eng:'en', hin:'hi', mar:'mr', ben:'bn', tam:'ta', tel:'te' };
+const SPEECH = { eng:'en-IN', hin:'hi-IN', ben:'bn-IN', tam:'ta-IN', tel:'te-IN', mar:'mr-IN' };
+
+const PROMPTS = [
+  'How do I get an Importer Exporter Code?',
+  'My buyer has not paid me — what can I do?',
+  'How do I register as an MSME?',
+  'What are dark patterns?',
+  'Can I get a loan without collateral?',
+];
+
+$('prompts').innerHTML = PROMPTS.map(p =>
+  `<button class="prompt" onclick="ask(${JSON.stringify(p).replace(/"/g,'&quot;')})">${esc(p)}</button>`
+).join('');
+
+function toast(message) {
+  const t = $('toast');
+  t.textContent = message; t.hidden = false;
+  clearTimeout(t._h); t._h = setTimeout(() => { t.hidden = true; }, 3600);
+}
+
+function setScript(lang) {
+  document.documentElement.setAttribute('data-script', SCRIPT[lang] || 'latin');
+}
+
+/* ── speaking ────────────────────────────────────────────────────────
+   The browser loads its voice list asynchronously and getVoices() returns nothing until
+   it has. Reading a Hindi answer in an English voice produces something no Hindi speaker
+   can follow, so the list is awaited rather than sampled. */
+let speakAloud = false, voicesReady = null;
+
+function loadVoices() {
+  if (voicesReady) return voicesReady;
+  voicesReady = new Promise((resolve) => {
+    const have = speechSynthesis.getVoices();
+    if (have.length) return resolve(have);
+    const done = () => resolve(speechSynthesis.getVoices());
+    speechSynthesis.addEventListener('voiceschanged', done, { once: true });
+    setTimeout(done, 2000);          // some engines never fire the event
+  });
+  return voicesReady;
+}
+
+function toggleSpeak() {
+  speakAloud = !speakAloud;
+  const btn = $('speak-btn');
+  btn.textContent = speakAloud ? '🔊 Reading aloud' : '🔇 Silent';
+  btn.className = 'chip-btn' + (speakAloud ? ' on' : '');
+  btn.setAttribute('aria-pressed', String(speakAloud));
+  if (speakAloud) loadVoices(); else speechSynthesis.cancel();
+}
+
+/* Resolves only once speaking has finished — otherwise the next listening turn opens
+   while the desk is still talking, and it transcribes its own voice. */
+async function speakThen(text, lang) {
+  if (!text) return;
+  const voices = await loadVoices();
+  const want = SPEECH[lang] || 'en-IN';
+  const voice = voices.find(v => v.lang === want)
+    || voices.find(v => v.lang.replace('_','-').startsWith(want.slice(0,2)));
+  if (!voice && lang !== 'eng') {
+    toast('This device has no voice for that language — the answer is on screen.');
+    return;
+  }
+
+  speechSynthesis.cancel();
+  /* Chrome stops after roughly fifteen seconds of one utterance, cutting long answers
+     mid-sentence — which reads as the desk breaking rather than a browser limit. */
+  const sentences = text.match(/[^.!?।]+[.!?।]+|[^.!?।]+$/g) || [text];
+  await new Promise((resolve) => {
+    let left = sentences.length;
+    for (const sentence of sentences) {
+      const u = new SpeechSynthesisUtterance(sentence.trim());
+      u.lang = want; u.rate = 0.98;
+      if (voice) u.voice = voice;
+      const done = () => { if (--left <= 0) resolve(); };
+      u.onend = done; u.onerror = done;
+      speechSynthesis.speak(u);
+    }
+    setTimeout(resolve, 2000 + sentences.length * 4000);   // engines that never call back
+  });
+}
+
+/* ── asking ─────────────────────────────────────────────────────────── */
+function submitTyped(event) {
+  event.preventDefault();
+  const text = $('q').value.trim();
+  if (text) { $('q').value = ''; ask(text); }
+}
+
+function onLangChange() {
+  setScript($('lang').value);
+}
+
+async function ask(question, spokenReply = false) {
+  const turn = document.createElement('div');
+  turn.className = 'turn';
+  turn.innerHTML = `<div class="q">${esc(question)}</div>
+    <div class="a thinking">Checking the records…</div>`;
+  $('log').prepend(turn);
+
+  let body;
+  try {
+    const res = await fetch('/api/ask', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: question, preferred_language: $('lang').value }),
+    });
+    body = await res.json();
+  } catch {
+    turn.querySelector('.a').outerHTML =
+      `<div class="a no_answer"><b>Could not reach the desk.</b> Try again in a moment.</div>`;
+    return null;
+  }
+
+  turn.querySelector('.a').outerHTML = render(body);
+  if (speakAloud || spokenReply) await speakThen(spokenText(body), body.answer_language || 'eng');
+  return body;
+}
+
+function slip(c, kind) {
+  const cls = kind === 'disputed' ? 'disputed' : (c.review_pending ? 'endorsed' : '');
+  const lang = c.passage_language || 'eng';
+  return `<div class="slip ${cls}">
+    ${c.review_pending ? '<span class="stamp">Review pending</span>' : ''}
+    <div class="prov"><span><b>${esc(c.item_title)}</b></span>
+      <span>${esc(c.issuing_authority)}</span><span>issued ${esc(c.issued_on)}</span></div>
+    <div class="passage" lang="${BCP[lang] || 'en'}">${esc(c.passage)}</div></div>`;
+}
+
+function render(r) {
+  const tags = [
+    r.confidence != null ? `<span class="tag ok">confidence ${r.confidence}</span>` : '',
+    r.stale_sources ? '<span class="tag warn">source due for review</span>' : '',
+    `<span class="tag">${r.latency_ms} ms</span>`,
+  ].filter(Boolean).join('');
+
+  if (r.outcome === 'answered') {
+    return `<div class="a"><div lang="${BCP[r.answer_language] || 'en'}">${esc(r.answer_text)}</div>
+      ${r.citations.map(c => slip(c)).join('')}<div class="meta">${tags}</div></div>`;
+  }
+  if (r.outcome === 'conflict') {
+    return `<div class="a conflict"><b>The sources disagree.</b> Two records answer this
+      differently, and the desk will not choose between them — that decision belongs to a
+      person who can weigh the dates.
+      <div class="band">Sources differ</div>
+      ${r.conflicting_sources.map(c => slip(c, 'disputed')).join('')}
+      <div class="meta">${tags}</div></div>`;
+  }
+  const note = r.reason === 'verification_unavailable'
+    ? 'The desk could not verify an answer just now. Try again shortly.'
+    : 'Nothing in the indexed records covers this, so the desk will not guess.';
+  return `<div class="a no_answer"><b>No reliable answer.</b> ${note}
+    ${(r.related_reading || []).map(c => slip(c)).join('')}
+    <div class="meta">${tags}</div></div>`;
+}
+
+/* What is *said* differs from what is shown: a file reference and an issue date are for
+   checking on screen, and reading them aloud buries the answer. Spoken, the source is
+   named once, in words. */
+function spokenText(r) {
+  if (r.outcome === 'answered') {
+    const source = r.citations?.[0];
+    return r.answer_text + (source ? ` That is from ${source.item_title}.` : '');
+  }
+  if (r.outcome === 'conflict') {
+    return 'Two records answer that differently, so I will not choose between them. '
+         + 'Both are on the screen. It is worth speaking to a person.';
+  }
+  return 'I have no reliable answer for that. Nothing in the indexed records covers it, '
+       + 'so I will not guess.';
+}
+
+/* ── hands-free conversation ─────────────────────────────────────────
+   Turn-taking is the whole problem. The desk must not listen while speaking or it
+   transcribes itself, and must not cut a person off mid-sentence. So the loop is
+   explicit — listen until silence, transcribe, answer, speak, listen again — and the
+   current turn is always shown, because with nothing being read the only orientation
+   available is knowing whose turn it is. */
+let callMode = false, recorder = null, chunks = [], audioCtx = null, hardStop = null;
+const SILENCE_MS = 1400, MIN_CLIP_MS = 700, MAX_CLIP_MS = 15000;
+
+function setTurn(state, text) {
+  const el = $('turnstate');
+  if (!callMode) { el.hidden = true; return; }
+  el.hidden = false;
+  el.className = `turnstate ${state}`;
+  el.innerHTML = `<span class="pip"></span><span>${esc(text)}</span>`;
+}
+
+async function toggleCall() {
+  if (callMode) { endCall('Call ended.'); return; }
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    toast('This browser cannot record audio. Type your question instead.');
+    return;
+  }
+  callMode = true;
+  $('call').setAttribute('aria-pressed', 'true');
+  $('call-label').textContent = 'End call';
+  $('call-hint').textContent = 'Speak naturally. Pause when you have finished, and say “stop” to end.';
+  if (!speakAloud) toggleSpeak();      // a spoken conversation must speak back
+  await loadVoices();
+  setTurn('speaking', 'Speaking…');
+  await speakThen('Go ahead, I am listening.', 'eng');
+  listenTurn();
+}
+
+function endCall(why) {
+  callMode = false;
+  $('call').setAttribute('aria-pressed', 'false');
+  $('call-label').textContent = 'Talk to the desk';
+  $('call-hint').textContent = 'Speak your question and hear the answer. Say “stop” to end.';
+  clearTimeout(hardStop);
+  if (recorder?.state === 'recording') recorder.stop();
+  speechSynthesis.cancel();
+  audioCtx?.close().catch(() => {});
+  audioCtx = null;
+  setTurn('', '');
+  if (why) toast(why);
+}
+
+async function listenTurn() {
+  if (!callMode) return;
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch {
+    endCall('Microphone permission was refused.');
+    return;
+  }
+
+  setTurn('listening', 'Listening — pause when you have finished.');
+  chunks = [];
+  recorder = new MediaRecorder(stream);
+  recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+  const started = Date.now();
+
+  recorder.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop());
+    audioCtx?.close().catch(() => {});
+    audioCtx = null;
+    if (!callMode) return;
+    if (Date.now() - started < MIN_CLIP_MS) { listenTurn(); return; }
+    setTurn('thinking', 'Working on it…');
+    await handleClip(new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }));
+  };
+
+  recorder.start();
+  watchForSilence(stream);
+  hardStop = setTimeout(() => {
+    if (callMode && recorder?.state === 'recording') recorder.stop();
+  }, MAX_CLIP_MS);
+}
+
+/* Stop on a natural pause rather than a fixed timer, so nobody is cut off mid-sentence
+   and nobody has to hold a button while they think. */
+function watchForSilence(stream) {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    let quietSince = null, everSpoke = false;
+
+    const tick = () => {
+      if (!callMode || recorder?.state !== 'recording') return;
+      analyser.getByteTimeDomainData(data);
+      let peak = 0;
+      for (const v of data) peak = Math.max(peak, Math.abs(v - 128));
+      if (peak > 6) { everSpoke = true; quietSince = null; }
+      else if (everSpoke) {
+        quietSince ??= Date.now();
+        if (Date.now() - quietSince > SILENCE_MS) { recorder.stop(); return; }
+      }
+      requestAnimationFrame(tick);
+    };
+    tick();
+  } catch {
+    /* No analyser — the hard ceiling still ends the turn. */
+  }
+}
+
+async function handleClip(blob) {
+  try {
+    const form = new FormData();
+    form.append('audio', blob, 'speech.webm');
+    const res = await fetch(`/api/transcribe?language=${$('lang').value}`, {
+      method: 'POST', body: form,
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      await speakThen('I did not catch that. Please say it again.', 'eng');
+      listenTurn();
+      return;
+    }
+
+    const said = body.text.trim();
+    // A spoken way out is the only one available when nothing is being read.
+    if (/^(stop|end|goodbye|bye|that'?s all)\b/i.test(said)) {
+      setTurn('speaking', 'Speaking…');
+      await speakThen('Ending the call. Ask again whenever you need to.', 'eng');
+      endCall('');
+      return;
+    }
+
+    setTurn('thinking', 'Checking the records…');
+    const answer = await ask(said, true);
+    if (!callMode) return;
+    setTurn('listening', 'Listening — pause when you have finished.');
+    listenTurn();
+  } catch {
+    await speakThen('Something went wrong reaching the desk. Try again.', 'eng');
+    if (callMode) listenTurn();
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && callMode) endCall('Call ended.');
+});
+</script>
+</body>
+</html>
