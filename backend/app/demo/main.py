@@ -82,6 +82,19 @@ feedback = FeedbackStore(settings.database_path)
 language_gate = LanguageGate()
 actions = Actions(settings.database_path)
 
+# The enabled set is derived from the gate rather than hard-coded. Previously the two
+# disagreed silently: the gate recorded Bengali, Tamil and Telugu as passing while the
+# runtime still offered only English and Hindi, so a measurement that had been taken
+# changed nothing. Deriving it means a language is offered exactly when it has earned
+# it — and Hindi, which had been offered all along without a score, is offered now
+# because it has one.
+_gated = {code for code in ("eng", "hin", "ben", "tam", "tel", "mar", "guj", "kan")
+          if language_gate.may_enable(code)[0]}
+if _gated != languages.enabled:
+    log.info("language.enabled_from_gate", enabled=sorted(_gated),
+             previously=sorted(languages.enabled))
+languages.enabled = _gated
+
 _feed_sources = {k: dict(v) for k, v in FEED_SOURCES.items()}
 _feed_sources["dgft_regulatory"]["feed_url"] = settings.dgft_feed_url
 _feed_sources["cbic_customs"]["feed_url"] = settings.cbic_feed_url
