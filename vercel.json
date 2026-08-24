@@ -1,9 +1,15 @@
 {
-  "functions": {
-    "api/index.py": {
-      "includeFiles": "backend/app/**",
-      "maxDuration": 60
+  "services": {
+    "trade-knowledge-helpdesk": {
+      "root": "backend",
+      "entrypoint": "app/demo/main.py",
+      "buildCommand": "pip install -r requirements.txt"
     }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }]
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": { "type": "service", "service": "trade-knowledge-helpdesk" }
+    }
+  ]
 }

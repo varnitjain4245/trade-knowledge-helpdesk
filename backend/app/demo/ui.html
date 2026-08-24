@@ -59,6 +59,17 @@ body{
 a{color:var(--indigo)}
 
 /* ── skip link: a GIGW staple, and genuinely useful with this much nav ── */
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+/* GIGW 3.0 asks for a high-contrast presentation. Honouring the OS setting is better
+   than a bespoke toggle: someone who needs it has already asked their system for it. */
+@media (prefers-contrast: more){
+  :root{ --ink:#000; --muted:#2a2a2a; --line:#000; }
+  a, button{ text-decoration-thickness:2px; }
+  .card, .tile, table{ border-color:#000 !important; }
+}
 .skip{
   position:absolute;left:-9999px;top:0;z-index:100;background:var(--indigo);color:#fff;
   padding:10px 16px;border-radius:0 0 var(--r) 0;
@@ -725,6 +736,9 @@ tr.rowlink:hover td{background:var(--seal-wash)}
   </div>
 </section>
 
+<div id="sr-status" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+<div id="sr-alert" role="alert" aria-live="assertive" aria-atomic="true" class="sr-only"></div>
+
 <main id="main" class="band grey">
   <div class="wrap">
 <section class="view on" id="view-agent">
@@ -748,7 +762,7 @@ tr.rowlink:hover td{background:var(--seal-wash)}
             </div>
             <div id="agent-alert"></div>
             <div style="margin-top:12px">
-              <textarea id="agent-reply" placeholder="Write a reply, or accept a suggestion to draft one."></textarea>
+              <textarea id="agent-reply" aria-label="Your reply to the customer" placeholder="Write a reply, or accept a suggestion to draft one."></textarea>
               <div class="row" style="margin-top:8px">
                 <button class="act solid" onclick="sendReply()">Send reply</button>
                 <button class="act" onclick="closeConversation()">Close as resolved</button>
@@ -761,7 +775,7 @@ tr.rowlink:hover td{background:var(--seal-wash)}
         <div>
           <div class="panel">
             <h2>Assist</h2>
-            <textarea id="agent-query" placeholder="Ask the knowledge base…"></textarea>
+            <textarea id="agent-query" aria-label="Ask the knowledge base" placeholder="Ask the knowledge base…"></textarea>
             <div class="row" style="margin-top:8px">
               <button class="act seal" onclick="runAssist()">Get suggestions</button>
               <span class="spacer"></span>
@@ -802,10 +816,10 @@ tr.rowlink:hover td{background:var(--seal-wash)}
             </div>
             <div id="cust-out"></div>
             <div style="margin-top:12px">
-              <textarea id="cust-query" placeholder="Ask in your own language…"></textarea>
+              <textarea id="cust-query" aria-label="Your question" placeholder="Ask in your own language…"></textarea>
               <div class="row" style="margin-top:8px">
                 <button class="act solid" onclick="customerAsk()">Ask</button>
-                <select id="cust-lang">
+                <select id="cust-lang" aria-label="Language to answer in">
                   <option value="">Detect language</option>
                   <option value="eng">English</option>
                   <option value="hin">हिन्दी</option>
@@ -918,9 +932,9 @@ tr.rowlink:hover td{background:var(--seal-wash)}
         before relying on a rate.</div>
       <div class="panel">
         <div class="row">
-          <input type="text" id="t-q" placeholder="Search a heading or description, e.g. cotton, 8479, rice"
+          <input type="text" id="t-q" aria-label="Search tariff headings" placeholder="Search a heading or description, e.g. cotton, 8479, rice"
             style="flex:1;min-width:220px" oninput="loadTariff()">
-          <select id="t-sector" onchange="loadTariff()"><option value="">All sectors</option></select>
+          <select id="t-sector" aria-label="Filter tariff by sector" onchange="loadTariff()"><option value="">All sectors</option></select>
         </div>
         <div style="overflow-x:auto;margin-top:12px">
         <table><thead><tr><th>Heading</th><th>Description</th><th style="text-align:right">Basic duty</th>
@@ -958,13 +972,13 @@ tr.rowlink:hover td{background:var(--seal-wash)}
         <h2>Add an entry</h2>
         <div class="row" style="gap:10px;align-items:flex-start">
           <div style="flex:2;min-width:240px">
-            <input type="text" id="ne-title" placeholder="Title, e.g. Circular 09/2024 — Duty on synthetic yarn">
-            <textarea id="ne-body" style="margin-top:8px" placeholder="The passage that will be quoted when this record is cited."></textarea>
+            <input type="text" id="ne-title" aria-label="Record title" placeholder="Title, e.g. Circular 09/2024 — Duty on synthetic yarn">
+            <textarea id="ne-body" aria-label="Record passage" style="margin-top:8px" placeholder="The passage that will be quoted when this record is cited."></textarea>
           </div>
           <div style="flex:1;min-width:180px">
-            <input type="text" id="ne-auth" placeholder="Issuing authority, e.g. CBIC">
+            <input type="text" id="ne-auth" aria-label="Issuing authority" placeholder="Issuing authority, e.g. CBIC">
             <div class="row" style="margin-top:8px">
-              <select id="ne-lang"><option value="eng">English</option><option value="hin">हिन्दी</option></select>
+              <select id="ne-lang" aria-label="Record language"><option value="eng">English</option><option value="hin">हिन्दी</option></select>
               <button class="act solid" onclick="createEntry()">Add for review</button>
             </div>
             <div class="hint">Lands in <b>pending review</b>. It cannot be cited until a
@@ -1042,7 +1056,7 @@ tr.rowlink:hover td{background:var(--seal-wash)}
       <div class="panel">
         <h2>Answer bar</h2>
         <div class="row">
-          <input type="number" id="bar" min="0" max="1" step="0.05" style="width:88px" onchange="pushSettings()">
+          <input type="number" id="bar" aria-label="Answer confidence bar" min="0" max="1" step="0.05" style="width:88px" onchange="pushSettings()">
           <span class="hint" style="margin:0">Below this confidence the system says it does
             not know rather than offering its best guess.</span>
         </div>
@@ -1144,7 +1158,7 @@ tr.rowlink:hover td{background:var(--seal-wash)}
       </svg>
       <span id="mic-label">Speak</span>
     </button>
-    <select id="bot-lang" title="Language you will speak in">
+    <select id="bot-lang" aria-label="Language you will speak in" title="Language you will speak in">
       <option value="eng">English</option>
       <option value="hin">हिन्दी</option>
       <option value="ben">বাংলা</option>
@@ -1165,7 +1179,7 @@ tr.rowlink:hover td{background:var(--seal-wash)}
     </label>
   </div>
   <form class="bot-foot" onsubmit="botAsk(event)">
-    <input type="text" id="bot-input" placeholder="Ask a question, or press Speak…" autocomplete="off">
+    <input type="text" id="bot-input" aria-label="Ask the desk a question" placeholder="Ask a question, or press Speak…" autocomplete="off">
     <button class="act solid tiny" type="submit">Ask</button>
   </form>
 </aside>
@@ -1247,7 +1261,30 @@ function slip(c, kind, primary) {
   </div>`;
 }
 
+/* Announce an outcome to assistive technology. Polite for an answer, which should not
+   interrupt someone mid-sentence; assertive for a refusal or a conflict, which change
+   what the person should do next and are worth interrupting for. */
+function announce(text, urgent) {
+  const el = document.getElementById(urgent ? 'sr-alert' : 'sr-status');
+  if (!el) return;
+  // Re-setting identical text is not treated as a change, so a second identical
+  // refusal would be announced once. Clearing first makes every outcome audible.
+  el.textContent = '';
+  setTimeout(() => { el.textContent = text; }, 60);
+}
+
+const SPOKEN_OUTCOME = {
+  answered: r => `Answer ready. ${r.citations.length} source${r.citations.length === 1 ? '' : 's'} cited. ${r.answer_text || ''}`,
+  no_answer: () => 'No reliable answer was found. You can ask to be put through to a person.',
+  conflict: () => 'The records disagree on this. Both are shown; neither has been chosen for you.',
+  blocked_coverage: () => 'This question is outside the published knowledge, so the desk has not answered it.',
+  blocked_fair_use: () => 'You have reached the question limit for this hour.',
+};
+
 function verdict(r, evidenceOnly) {
+  const speak = SPOKEN_OUTCOME[r.outcome];
+  if (speak) announce(speak(r), r.outcome !== 'answered');
+
   const chips = [
     `<span class="chip">${esc(r.outcome)}</span>`,
     r.confidence !== null ? `<span class="chip ok">confidence ${r.confidence}</span>` : '',
@@ -1461,7 +1498,7 @@ async function requestHandover() {
       <button class="act seal tiny" onclick="simulateAssign()">Agent picks it up</button>
     </div>
     <div style="margin-top:12px">
-      <input type="text" id="cb-contact" placeholder="Or leave a number for a callback">
+      <input type="text" id="cb-contact" aria-label="Phone number for a callback" placeholder="Or leave a number for a callback">
       <button class="act tiny" style="margin-top:7px" onclick="requestCallback()">Request a callback</button>
     </div>`;
   refresh('analytics');
@@ -1639,7 +1676,7 @@ async function renderAnalytics() {
   };
   $('count-tiles').innerHTML = Object.entries(a.counters).map(([k, v]) =>
     `<div class="tile rowlink" tabindex="0" onclick="go('${DEST[k] || 'agent'}')"
-       onkeydown="if(event.key==='Enter')go('${DEST[k] || 'agent'}')">
+       role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();go('${DEST[k] || 'agent'}')}">
      <div class="lbl">${esc(k.replace(/_/g, ' '))}</div>
      <div class="val">${v}</div>
      <div class="note">Open ${esc(BOT_WHERE[DEST[k] || 'agent'])}</div></div>`).join('');

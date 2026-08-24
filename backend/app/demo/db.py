@@ -22,7 +22,7 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS app_user (
@@ -82,6 +82,51 @@ CREATE TABLE IF NOT EXISTS query_history (
 CREATE INDEX IF NOT EXISTS idx_history_user_time
     ON query_history(user_id, asked_at DESC);
 CREATE INDEX IF NOT EXISTS idx_history_cited ON query_history(cited);
+
+-- Grievances. A question the desk cannot settle becomes a tracked item with an
+-- identifier the person keeps, rather than a conversation that ends. The escalation
+-- ladder follows the CPGRAMS pattern: a grievance unattended past its due time rises
+-- to the next level automatically, because a grievance that waits silently is the
+-- failure mode a redress system exists to prevent.
+CREATE TABLE IF NOT EXISTS grievance (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    reference       TEXT    NOT NULL UNIQUE,
+    user_id         INTEGER REFERENCES app_user(id) ON DELETE SET NULL,
+    -- Kept even when no account exists, so an anonymous grievance can still be
+    -- traced back to its author by the reference they were given.
+    contact         TEXT    NOT NULL DEFAULT '',
+    subject         TEXT    NOT NULL,
+    detail          TEXT    NOT NULL,
+    category        TEXT    NOT NULL DEFAULT 'general',
+    language        TEXT    NOT NULL DEFAULT 'eng',
+    -- lodged -> acknowledged -> under_review -> resolved | closed
+    status          TEXT    NOT NULL DEFAULT 'lodged',
+    -- 0 nodal officer, 1 sub-nodal, 2 appellate. Rises on breach, never falls.
+    level           INTEGER NOT NULL DEFAULT 0,
+    assigned_to     TEXT    NOT NULL DEFAULT 'Nodal Officer',
+    -- The SLA clock. Stored as an absolute instant rather than a duration so that a
+    -- restart cannot reset somebody's waiting time.
+    due_at          TEXT    NOT NULL,
+    resolution      TEXT,
+    lodged_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+    CHECK (status IN ('lodged','acknowledged','under_review','resolved','closed')),
+    CHECK (level BETWEEN 0 AND 2)
+);
+CREATE INDEX IF NOT EXISTS idx_grievance_user ON grievance(user_id, lodged_at DESC);
+CREATE INDEX IF NOT EXISTS idx_grievance_due ON grievance(status, due_at);
+
+-- Append-only. The history of a grievance is evidence about how it was handled, so a
+-- correction is a new row, never an edit to an old one.
+CREATE TABLE IF NOT EXISTS grievance_event (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    grievance_id    INTEGER NOT NULL REFERENCES grievance(id) ON DELETE CASCADE,
+    kind            TEXT    NOT NULL,
+    note            TEXT    NOT NULL DEFAULT '',
+    actor           TEXT    NOT NULL DEFAULT 'system',
+    at              TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_grievance_event ON grievance_event(grievance_id, at);
 
 CREATE TABLE IF NOT EXISTS schema_meta (
     key   TEXT PRIMARY KEY,

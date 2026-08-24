@@ -30,6 +30,10 @@ from app.demo.programmes import (DEADLINES, NOTICES, SCHEMES, SECTORS, TARIFF,
                                  eligible)
 from app.demo.accounts import Accounts
 from app.demo.attachments import ExtractionFailed, as_passages, extract
+from app.demo.grievances import Grievances
+from app.models.bhashini import ISO3_TO_BHASHINI, BhashiniClient, BhashiniUnavailable
+from app.demo.opendata import CATALOGUE, OpenDataClient
+from app.demo.verification import BusinessVerifier, classify_by_turnover
 from app.demo.learning import LearningLog
 from app.demo.workspace import Workspace
 from app.models.generation import (ExtractiveGenerationService,
@@ -59,6 +63,10 @@ cache = AnswerCache(InMemoryCacheBackend(), settings.answer_cache_ttl_seconds, g
 workspace = Workspace()
 accounts = Accounts(settings.database_path)
 learning = LearningLog(settings)
+grievances = Grievances(settings.database_path)
+bhashini = BhashiniClient(settings)
+opendata = OpenDataClient(settings.data_gov_api_key)
+verifier = BusinessVerifier(settings.apisetu_api_key, settings.apisetu_client_id)
 
 #: Extracted text from a document someone attached, held per conversation only. It never
 #: enters the knowledge base — an uploaded file is not an approved record, and letting it
@@ -189,6 +197,13 @@ answer_service = AnswerService(
     detector=ScriptLanguageDetector(),
     embedder=DemoEmbedder(),
 )
+
+# Attached rather than passed: the rewriter is an optional second retrieval pass, and
+# AnswerService treats its absence as "no rewriting" so the constructor signature stays
+# the one the design documents describe.
+from app.services.query_rewrite import QueryRewriter  # noqa: E402
+
+answer_service._rewriter = QueryRewriter(settings)
 
 app = FastAPI(title="Smart Contact-Center Knowledge Platform — demo", version="0.1.0")
 
@@ -844,6 +859,25 @@ async def transcribe(
         # transcript that looks like the desk misheard.
         raise HTTPException(422, "That recording was too short to make out.")
 
+    # Bhashini first, when it is configured and covers the language. It is the
+    # ministry's own stack, it reaches all twenty-two scheduled languages rather than
+    # the six a foreign model serves well, and speech is the input least appropriate
+    # to send abroad. Whisper remains the fallback so the desk still hears somebody
+    # who is using an installation with no Bhashini key.
+    if bhashini.available and bhashini.supports(language):
+        try:
+            text = await bhashini.transcribe(
+                payload, language,
+                audio_format=(audio.content_type or "audio/webm").split("/")[-1],
+            )
+            if text.strip():
+                log.info("transcribe.bhashini", language=language)
+                return {"text": text.strip(), "language": language,
+                        "engine": "bhashini"}
+        except (BhashiniUnavailable, httpx.HTTPError) as exc:
+            # A degradation, not a failure: the question can still be transcribed.
+            log.warning("transcribe.bhashini_failed", error=str(exc))
+
     whisper_lang = {"eng": "en", "hin": "hi", "ben": "bn",
                     "tam": "ta", "tel": "te", "mar": "mr"}.get(language, "en")
 
@@ -875,7 +909,51 @@ async def transcribe(
     text = response.json().get("text", "").strip()
     if not text:
         raise HTTPException(422, "Nothing was audible in that recording.")
-    return {"text": text, "language": language}
+    return {"text": text, "language": language, "engine": "whisper"}
+
+
+@app.get("/api/v1/demo/speech/engines")
+def speech_engines() -> dict:
+    """What is actually serving speech, and in how many languages.
+
+    Stated rather than implied: a claim to support twenty-two languages that rests on
+    an unconfigured key is a claim the interface should not make on the desk's behalf.
+    """
+    return {
+        "bhashini": {
+            "configured": bhashini.available,
+            "languages": sorted(ISO3_TO_BHASHINI) if bhashini.available else [],
+            "count": len(ISO3_TO_BHASHINI) if bhashini.available else 0,
+        },
+        "whisper": {
+            "configured": bool(settings.groq_api_key),
+            "languages": ["eng", "hin", "ben", "tam", "tel", "mar"],
+            "count": 6,
+        },
+        "active": "bhashini" if bhashini.available else (
+            "whisper" if settings.groq_api_key else "browser"),
+    }
+
+
+class SpeakBody(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+    language: str = "eng"
+
+
+@app.post("/api/v1/demo/speak")
+async def speak(body: SpeakBody) -> Response:
+    """Server-side text to speech, for languages the browser cannot voice."""
+    if not (bhashini.available and bhashini.supports(body.language)):
+        raise HTTPException(
+            503,
+            "Server-side speech is not configured. The browser's own voice is used "
+            "instead, which covers fewer languages.",
+        )
+    try:
+        audio_bytes = await bhashini.speak(body.text, body.language)
+    except (BhashiniUnavailable, httpx.HTTPError) as exc:
+        raise HTTPException(502, f"Speech synthesis failed: {exc}") from exc
+    return Response(content=audio_bytes, media_type="audio/wav")
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════
@@ -971,6 +1049,116 @@ def save_prefs(body: PrefsBody, scc_session: str | None = Cookie(default=None)) 
         raise HTTPException(401, "Sign in to save your preferences.")
     accounts.save_preferences(user, body.model_dump(exclude_none=True))
     return _profile(user)
+
+
+# --- grievances ---------------------------------------------------------------------
+# A question the desk cannot settle becomes a tracked item rather than a dead end. The
+# reference is the person's receipt: it works without an account, because requiring one
+# to complain would exclude exactly the people most likely to need to.
+
+class GrievanceBody(BaseModel):
+    subject: str
+    detail: str
+    category: str = "general"
+    contact: str = ""
+    language: str = "eng"
+
+
+@app.post("/api/v1/demo/grievances")
+def lodge_grievance(body: GrievanceBody,
+                    scc_session: str | None = Cookie(default=None)) -> dict:
+    user = _me(scc_session)
+    try:
+        return grievances.lodge(
+            body.subject, body.detail, category=body.category,
+            user_id=user.id if user else None, contact=body.contact,
+            language=body.language,
+        )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.get("/api/v1/demo/grievances/{reference}")
+def track_grievance(reference: str) -> dict:
+    found = grievances.track(reference)
+    if found is None:
+        raise HTTPException(404, "No grievance with that reference.")
+    return found.as_dict()
+
+
+class GrievanceStatusBody(BaseModel):
+    status: str
+    note: str = ""
+
+
+@app.post("/api/v1/demo/grievances/{reference}/status")
+def set_grievance_status(reference: str, body: GrievanceStatusBody) -> dict:
+    try:
+        updated = grievances.update_status(reference, body.status, body.note)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    if updated is None:
+        raise HTTPException(404, "No grievance with that reference.")
+    return updated
+
+
+@app.get("/api/v1/demo/grievances")
+def grievance_queue() -> dict:
+    return {"queue": grievances.queue(), "summary": grievances.summary()}
+
+
+@app.get("/api/v1/demo/me/grievances")
+def my_grievances(scc_session: str | None = Cookie(default=None)) -> dict:
+    user = _me(scc_session)
+    if not user:
+        raise HTTPException(401, "Sign in to see the grievances you have lodged.")
+    return {"grievances": grievances.for_user(user.id)}
+
+
+# --- business verification and open data ---------------------------------------------
+
+class VerifyBody(BaseModel):
+    udyam: str = ""
+    gstin: str = ""
+
+
+@app.post("/api/v1/demo/verify")
+async def verify_business(body: VerifyBody) -> dict:
+    """Check a Udyam or GST registration against the registry that issued it.
+
+    A number that cannot be checked is reported as unchecked, never as invalid: a
+    registry outage is not evidence about the business behind the number.
+    """
+    out: dict = {}
+    if body.udyam.strip():
+        out["udyam"] = (await verifier.verify_udyam(body.udyam)).as_dict()
+    if body.gstin.strip():
+        out["gstin"] = (await verifier.verify_gstin(body.gstin)).as_dict()
+    if not out:
+        raise HTTPException(422, "Give a Udyam number or a GSTIN to check.")
+
+    verified = [v for v in out.values() if v["trusted"]]
+    out["registry_connected"] = verifier.available
+    out["classification"] = next(
+        (v["classification"] for v in verified if v.get("classification")), None
+    )
+    out["basis"] = "registry" if out["classification"] else "self_declared"
+    return out
+
+
+@app.get("/api/v1/demo/opendata/catalogue")
+def opendata_catalogue() -> dict:
+    """What could be ingested, and whether ingestion is actually configured."""
+    return {
+        "configured": opendata.available,
+        "datasets": [
+            {"key": k, "title": v["title"], "authority": v["authority"],
+             "topic": v["topic"]}
+            for k, v in CATALOGUE.items()
+        ],
+        "note": ("Ingested records enter the corpus at pending_review and cannot be "
+                 "cited until a curator approves them."),
+    }
 
 
 @app.get("/api/v1/demo/me/dashboard")

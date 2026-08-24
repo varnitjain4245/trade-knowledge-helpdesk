@@ -72,6 +72,11 @@ class AnswerResult:
             raise ValueError("an answered result must carry at least one citation (BR-1)")
 
 
+#: The judge's scale calls this "answers most of it, or answers it partially".
+#: A score at or below it means a better record may still exist.
+PARTIAL_MATCH = 0.7
+
+
 @dataclass(frozen=True)
 class AnswerRequest:
     query: str
@@ -190,6 +195,69 @@ class AnswerService:
             confidence_ceiling = answer_bar - 0.01
 
         top = candidates[: self._settings.rerank_top_n]
+
+        # 5b. Second retrieval pass, triggered by the judge rather than by a lexical
+        #     score. Measurement is the reason: for "my goods are stuck at the port"
+        #     BM25 returns a confidently wrong record at 0.58, so a low lexical score
+        #     does not mark the failure — the index is sure, and sure of the wrong
+        #     thing. What does mark it is the judge finding that nothing retrieved
+        #     answers the question. So the retry fires exactly where the request was
+        #     otherwise about to end in a refusal or a partial answer, and nowhere
+        #     else.
+        #
+        #     The trigger is "partial or worse", not "below the bar", and the
+        #     difference is not cosmetic. The judge's own scale calls 0.7 "answers it
+        #     partially" and the answer bar is also 0.7, so a partial match sits
+        #     exactly on the bar and passes. "My goods are stuck at the port" scored
+        #     0.7 against pre-shipment inspection and was answered from it. Retrying
+        #     on equality is what reaches those; a strict inequality never fires.
+        #
+        #     The rewrite is a retrieval key only. It never reaches the generator and
+        #     is never shown, so it cannot introduce a claim, and the judge still
+        #     scores the second pass against the user's own words — the rewrite gets
+        #     no say in whether its own results are good.
+        rewriter = getattr(self, "_rewriter", None)
+        judged_best = top[0].score if top else 0.0
+        if (
+            rewriter is not None
+            and confidence_ceiling is None
+            and judged_best <= PARTIAL_MATCH
+            and rewriter.should_rewrite()
+            and deadline.allows(2000)
+        ):
+            rewritten = await rewriter.rewrite(request.query)
+            if rewritten:
+                second = self._retrieval.hybrid_search(
+                    vectors[0], rewritten, self._settings.retrieval_candidate_count
+                )
+                if second:
+                    try:
+                        scores2 = await self._reranker.rerank(
+                            request.query, [c.body for c in second]
+                        )
+                        rejudged = sorted(
+                            [
+                                ScoredChunk(**{**c.__dict__, "rerank_score": s2})
+                                for c, s2 in zip(second, scores2, strict=True)
+                            ],
+                            key=lambda c: c.score,
+                            reverse=True,
+                        )
+                        # A tie goes to the rewrite, and only a tie. This branch is
+                        # reached only when the first pass was partial or worse, so
+                        # nothing strong is ever displaced. Between two equally-judged
+                        # partial matches, the one retrieved on a named subject is the
+                        # better citation: asked "what do I need to sell abroad", both
+                        # the e-commerce consumer rules and the Importer Exporter Code
+                        # score 0.7, and only one of them is what was asked about.
+                        if rejudged and rejudged[0].score >= judged_best:
+                            log.info("answer.rewrite_improved",
+                                     before=round(judged_best, 3),
+                                     after=round(rejudged[0].score, 3))
+                            candidates = rejudged
+                            top = candidates[: self._settings.rerank_top_n]
+                    except (CircuitOpen, TimeoutError, ValueError) as exc:
+                        log.warning("answer.rewrite_rerank_failed", error=str(exc))
 
         # 6. Conflict detection BEFORE the bar (BR-6). A conflict is shown regardless of
         #    confidence and is never counted as an answer.

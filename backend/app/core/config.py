@@ -42,6 +42,22 @@ class Settings(BaseSettings):
     schema is written as it would be for PostgreSQL, so moving is a migration rather than
     a rewrite.
     """
+    # --- Bhashini (MeitY National Language Translation Mission) -----------------------
+    bhashini_user_id: str = ""
+    bhashini_api_key: str = ""
+    bhashini_pipeline_id: str = ""
+    """Credentials from bhashini.gov.in. Empty means the client reports itself
+    unavailable and speech falls back to the browser's own recognition, which covers
+    fewer languages and only in some browsers. The desk must work without a key."""
+
+    # --- Open government data and verification ---------------------------------------
+    data_gov_api_key: str = ""
+    """Key from data.gov.in. Absent, ingestion refuses rather than inventing records."""
+    apisetu_api_key: str = ""
+    apisetu_client_id: str = ""
+    """API Setu credentials for Udyam and GSTIN verification. Absent, a well-formed
+    number reports as 'unavailable' — never as verified, and never as invalid."""
+
     object_store_endpoint: str = "http://localhost:9000"
     object_store_bucket: str = "scc-documents"
 

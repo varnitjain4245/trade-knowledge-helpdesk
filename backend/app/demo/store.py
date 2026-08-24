@@ -13,6 +13,7 @@ grounding suppression and the bar are exactly the production code paths.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
 from uuid import UUID, uuid4
@@ -180,6 +181,41 @@ def _content_words(text: str) -> list[str]:
     return [_stem(w) for w in words if w not in _STOPWORDS and len(w) > 2]
 
 
+_CHAR_N = 3
+
+
+def _char_ngrams(text: str) -> "Counter[str]":
+    """Character trigrams over the whole string, spaces normalised to one.
+
+    BM25 matches whole stemmed words, so it cannot see that "e-way bill" and "eway
+    bill" are the same thing, that "RoDTEP" appears inside "RoDTEP scrip", or that a
+    misspelt "importor" is the word "importer". Trigrams see all three. This is the
+    non-lexical half of the hybrid: it retrieves on surface form rather than on
+    vocabulary, which is exactly the axis BM25 is blind along.
+    """
+    from collections import Counter
+
+    flat = " " + re.sub(r"\s+", " ", text.lower().replace("-", "")).strip() + " "
+    return Counter(flat[i:i + _CHAR_N] for i in range(len(flat) - _CHAR_N + 1))
+
+
+def _rrf(rankings: "list[list[int]]", k: int = 60) -> dict[int, float]:
+    """Reciprocal rank fusion.
+
+    Each retriever contributes 1/(k + rank) for every document it ranks. The point of
+    fusing on *rank* rather than on score is that BM25 scores and trigram cosines live
+    on incomparable scales; normalising them into a weighted sum would mean inventing
+    an exchange rate between them. RRF needs no such invention, which is why it is the
+    standard production fusion. k=60 is the value from the original TREC work: large
+    enough that the tail still contributes, small enough that rank 1 dominates rank 20.
+    """
+    fused: dict[int, float] = {}
+    for ranking in rankings:
+        for rank, chunk_id in enumerate(ranking, start=1):
+            fused[chunk_id] = fused.get(chunk_id, 0.0) + 1.0 / (k + rank)
+    return fused
+
+
 @dataclass
 class DemoStore:
     items: dict[UUID, DemoItem] = field(default_factory=dict)
@@ -236,27 +272,33 @@ class DemoStore:
             for term, freq in doc_freq.items()
         }
 
-    def hybrid_search(self, _vector, query_text: str, candidates: int) -> list[ScoredChunk]:
-        """BM25 over the answerable set.
+        # Trigram index, built over the same answerable set and in the same pass, so
+        # the two retrievers can never disagree about which records exist.
+        self._ng_docs = {}
+        ng_freq: Counter[str] = Counter()
+        for chunk_id, (item_id, passage) in self._chunk_index.items():
+            if self.items[item_id].status not in ("approved", "stale"):
+                continue
+            grams = _char_ngrams(self.items[item_id].title + " " + passage)
+            self._ng_docs[chunk_id] = grams
+            ng_freq.update(grams.keys())
+        self._ng_idf = {
+            gram: math.log(1 + (total - freq + 0.5) / (freq + 0.5))
+            for gram, freq in ng_freq.items()
+        }
+        # Precomputed norms: the cosine denominator does not depend on the query, so
+        # computing it per query would repeat the same work on every request.
+        self._ng_norm = {
+            chunk_id: math.sqrt(sum((tf * self._ng_idf.get(g, 0.0)) ** 2
+                                    for g, tf in grams.items())) or 1.0
+            for chunk_id, grams in self._ng_docs.items()
+        }
 
-        The answerable-set filter is applied exactly as the real repository applies it in
-        SQL: status decides answerability at query time, so retiring a record removes it
-        from the very next answer with no cache or index step (BR-8).
-        """
-        if not hasattr(self, "_idf") or self._dirty:
-            self._index()
-            self._dirty = False
-
-        query = _content_words(expand_query(query_text))
-        if not query:
-            return []
-
+    def _bm25_scores(self, query: list[str]) -> dict[int, float]:
+        """BM25 with a coverage penalty, over the answerable set."""
         k1, b = 1.5, 0.75
-        scored: list[ScoredChunk] = []
+        out: dict[int, float] = {}
         for chunk_id, (freqs, length) in self._docs.items():
-            item_id, passage = self._chunk_index[chunk_id]
-            item = self.items[item_id]
-
             score = 0.0
             matched = 0
             for term in set(query):
@@ -277,9 +319,77 @@ class DemoStore:
             # "operator" — a wrong answer wearing a citation, which is worse than no
             # answer at all. The square root keeps the penalty soft, so a passage that
             # covers most of a long question is not punished for the odd stray word.
-            coverage = matched / len(set(query))
-            score *= coverage ** 0.5
+            out[chunk_id] = score * (matched / len(set(query))) ** 0.5
+        return out
 
+    def _ngram_scores(self, query_text: str) -> dict[int, float]:
+        """Cosine similarity between query and passage trigram vectors."""
+        import math
+
+        q = _char_ngrams(query_text)
+        q_weighted = {g: tf * self._ng_idf.get(g, 0.0) for g, tf in q.items()}
+        q_norm = math.sqrt(sum(w * w for w in q_weighted.values()))
+        if not q_norm:
+            return {}
+
+        out: dict[int, float] = {}
+        for chunk_id, grams in self._ng_docs.items():
+            dot = sum(w * grams.get(g, 0) * self._ng_idf.get(g, 0.0)
+                      for g, w in q_weighted.items() if g in grams)
+            if dot <= 0:
+                continue
+            out[chunk_id] = dot / (q_norm * self._ng_norm[chunk_id])
+        return out
+
+    def hybrid_search(self, _vector, query_text: str, candidates: int) -> list[ScoredChunk]:
+        """Hybrid retrieval: BM25 and character trigrams, fused by reciprocal rank.
+
+        The two retrievers fail in different places. BM25 misses a question whose
+        wording shares no stemmed vocabulary with the record — the limitation this
+        system reported for its lexical-only version. Trigrams miss a question that is
+        about the right topic in entirely different words. Fusing their *ranks* keeps
+        a passage that either one is confident about, without needing the two score
+        scales to be commensurable.
+
+        The answerable-set filter is applied exactly as the real repository applies it
+        in SQL: status decides answerability at query time, so retiring a record removes
+        it from the very next answer with no cache or index step (BR-8).
+        """
+        if not hasattr(self, "_idf") or self._dirty:
+            self._index()
+            self._dirty = False
+
+        expanded = expand_query(query_text)
+        query = _content_words(expanded)
+        if not query:
+            return []
+
+        bm25 = self._bm25_scores(query)
+        ngram = self._ngram_scores(expanded)
+        if not bm25 and not ngram:
+            return []
+
+        def ranked(scores: dict[int, float], limit: int) -> list[int]:
+            return sorted(scores, key=lambda c: scores[c], reverse=True)[:limit]
+
+        # Each retriever contributes a bounded candidate list. Fusing full rankings
+        # would let a passage that both retrievers rank near the bottom accumulate
+        # enough reciprocal weight to displace one that a single retriever is sure of.
+        depth = max(candidates * 3, 20)
+        fused = _rrf([ranked(bm25, depth), ranked(ngram, depth)])
+
+        order = sorted(fused, key=lambda c: (fused[c], bm25.get(c, 0.0)), reverse=True)
+        scored: list[ScoredChunk] = []
+        for chunk_id in order[:candidates]:
+            item_id, passage = self._chunk_index[chunk_id]
+            item = self.items[item_id]
+            # Confidence keeps its lexical meaning: a passage BM25 found scores as
+            # BM25 scored it. One that only trigrams found is retrieved but capped
+            # below the answer bar, so a surface-form match can reach the relevance
+            # judge — which is competent to assess it — but can never carry an answer
+            # on its own if the judge is unavailable.
+            lexical = bm25.get(chunk_id)
+            score = lexical if lexical is not None else min(3.0, ngram.get(chunk_id, 0.0) * 6.0)
             scored.append(
                 ScoredChunk(
                     chunk_id=chunk_id, item_id=item_id, body=passage,
@@ -291,29 +401,27 @@ class DemoStore:
                 )
             )
 
-        scored.sort(key=lambda c: c.dense_score, reverse=True)
-        top = scored[:candidates]
-
         # Stash the scores so the reranker reproduces this ranking exactly. Without it
         # the reranker re-scores passage bodies alone, loses the title weighting, and
         # reorders a title-matched record out of first place.
-        self._last_scores = {c.body: c.dense_score for c in top}
+        self._last_scores = {c.body: c.dense_score for c in scored}
         # The judge is handed passage text only, and a passage often carries its subject
         # in the title rather than repeating it — the dark-patterns record says
         # "deceptive design practices" throughout and names the term only in its title.
         # Without this the judge scored it irrelevant to a question about dark patterns.
-        self._last_titles = {c.body: c.item_title for c in top}
+        self._last_titles = {c.body: c.item_title for c in scored}
 
         # Normalise to 0-1 so downstream confidence keeps its meaning. Scaling against the
         # best score in this result set alone would make every query look equally
         # confident, so the divisor includes a floor.
-        if top:
-            ceiling = max(6.0, top[0].dense_score)
-            top = [
+        if scored:
+            ceiling = max(6.0, scored[0].dense_score)
+            scored = [
                 ScoredChunk(**{**c.__dict__, "dense_score": min(1.0, c.dense_score / ceiling)})
-                for c in top
+                for c in scored
             ]
-        return top
+        return scored
+
 
 class DemoReranker:
     """Standing in for a cross-encoder, scored by weighted query coverage.
