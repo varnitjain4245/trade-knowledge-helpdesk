@@ -1,0 +1,246 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Answers That Can Be Checked: A Citation-Grounded Multilingual Knowledge Platform for Government Contact Centres</title>
+<style>
+@page { size: A4; margin: 19mm 16mm 25mm 16mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 10pt; line-height: 1.16; margin: 0; color: #000;
+  text-align: justify; hyphens: auto;
+}
+.title {
+  font-size: 22pt; font-weight: 400; text-align: center; line-height: 1.15;
+  margin: 0 0 14pt; column-span: all; font-family: 'Times New Roman', serif;
+}
+.authors {
+  column-span: all; text-align: center; font-size: 10pt; margin: 0 0 18pt;
+  line-height: 1.35;
+}
+.authors .name { font-size: 11pt; }
+.authors .aff { font-style: italic; }
+.body { column-count: 2; column-gap: 6mm; }
+h2.sec {
+  font-size: 10pt; font-weight: 400; text-align: center; text-transform: none;
+  margin: 12pt 0 4pt; break-after: avoid;
+}
+h2.sec .sc { font-variant: small-caps; }
+h3.sub {
+  font-size: 10pt; font-weight: 400; font-style: italic; text-align: left;
+  margin: 9pt 0 3pt; break-after: avoid;
+}
+p { margin: 0 0 0; text-indent: 12pt; }
+p + p { margin-top: 0; }
+p.abstract { font-weight: bold; font-style: italic; text-indent: 0; margin-bottom: 8pt; }
+p.lead { text-indent: 12pt; }
+p.ref {
+  font-size: 8pt; text-indent: -10pt; padding-left: 10pt; margin-bottom: 2pt;
+  text-align: left;
+}
+h2.refs-head { text-align: center; }
+table.ieee {
+  width: 100%; border-collapse: collapse; font-size: 8pt; margin: 4pt 0 10pt;
+  break-inside: avoid; text-align: center;
+}
+table.ieee th {
+  border-top: 1px solid #000; border-bottom: 1px solid #000;
+  padding: 3pt 4pt; font-weight: 400; font-style: italic;
+}
+table.ieee td { padding: 2.5pt 4pt; border-bottom: 0.4pt solid #999; }
+table.ieee tr:last-child td { border-bottom: 1px solid #000; }
+figure.ieee {
+  column-span: all; margin: 8pt 0 10pt; text-align: center; break-inside: avoid;
+}
+pre.fig {
+  font-family: 'Menlo', 'DejaVu Sans Mono', 'Courier New', monospace;
+  font-size: 6pt; line-height: 1.05; margin: 0 0 4pt; display: inline-block;
+  text-align: left; white-space: pre;
+}
+figure.ieee figcaption {
+  font-size: 8pt; text-align: justify; margin: 0 auto; max-width: 100%;
+}
+code { font-family: 'Courier New', monospace; font-size: 8.5pt; }
+strong { font-weight: bold; }
+</style></head><body>
+<h1 class="title">Answers That Can Be Checked: A Citation-Grounded Multilingual Knowledge Platform for Government Contact Centres</h1>
+
+<div class="authors">
+  <div class="name">First Author, Second Author, Third Author, Fourth Author, Fifth Author</div>
+  <div class="aff">Department of Computer Science</div>
+  <div>[Institution], [City], India</div>
+  <div>{first.author, second.author, third.author}@[institution].edu</div>
+</div>
+<div class="body">
+<p class="abstract"><strong>Abstract</strong> &#8212; Contact centres serving government trade and commerce administration answer questions whose consequences are material: a licence not obtained holds a consignment at port, and a duty rate quoted wrongly becomes a penalty. Existing retrieval-augmented question answering systems optimise for producing an answer, and treat provenance as a display feature appended after generation. This paper proposes a knowledge platform for such contact centres in which provenance is a structural precondition rather than a presentation choice. Four mechanisms distinguish the design: an answer that cannot be attributed to an approved record is unrepresentable in the system&#x27;s type system rather than merely discouraged; contradiction between records is detected <em>before</em> the confidence threshold is applied, so a disagreement is surfaced as a disagreement rather than silently resolved in favour of the higher-scoring source; a generated draft is verified against the passages that produced it and <strong>suppressed</strong> rather than flagged when unsupported; and refusal is a first-class outcome returned with a success status, so that &quot;no reliable answer&quot; is never presented in the visual or protocol language of failure. The system additionally treats retirement of superseded guidance as immediate through a generation counter that invalidates cached answers atomically, gates a public surface behind a declared coverage floor, and supports six Indian languages with per-language enablement contingent on measured correctness. An implementation over a 51-record trade corpus answered 30 of 30 realistic practitioner questions with citations while correctly refusing all out-of-domain questions. We report the defects that measurement exposed, several of which were invisible to component-level testing.</p>
+<p class="abstract"><strong>Keywords</strong> &#8212; Retrieval-augmented generation, grounded question answering, provenance, government contact centre, multilingual information access, knowledge governance, trade facilitation</p>
+<h2 class="sec">I. I<span class="sc">ntroduction</span></h2>
+<p>Learning management systems, customer service platforms and public helpdesks have all converged on a similar architecture for question answering: retrieve candidate passages from a corpus, condition a language model on them, and return generated prose. This pattern, commonly called retrieval-augmented generation, substantially reduces unsupported assertion relative to unconditioned generation, and its adoption across educational and administrative software has been rapid [1], [2].</p>
+<p>The pattern is nonetheless insufficient for a class of application in which the <em>basis</em> of an answer matters as much as its content. A contact centre serving India&#x27;s commerce and industry administration is one such case. Its users are exporters, importers, micro and small enterprises and customs intermediaries; its subject matter is licensing, tariff classification, goods and services tax, incentive schemes and e-commerce obligation. The material is issued continuously by multiple authorities as circulars, notifications and public notices, amended frequently, and published as documents rather than as answers.</p>
+<p>Four properties of this setting are not addressed by conventional retrieval-augmented question answering.</p>
+<p><strong>Consequence asymmetry.</strong> A wrong answer is not a poor user experience; it is a held consignment, a forfeited incentive, or a penalty. The cost of a confident error greatly exceeds the cost of an admitted gap. Systems tuned to maximise answer rate optimise the wrong quantity.</p>
+<p><strong>Amendment.</strong> Guidance in this domain expires by supersession rather than by age. When a public notice reverses the licensing status of a commodity, every prior answer becomes wrong at a specific instant. A system that caches answers, or that embeds knowledge in model weights, cannot retire guidance at that instant.</p>
+<p><strong>Contradiction.</strong> Multiple authorities issue overlapping material, and a corpus of any size contains records that disagree. Presenting the higher-ranked one as the answer conceals a decision the system is not competent to make.</p>
+<p><strong>Language.</strong> A substantial fraction of the user population is more fluent in a language other than English, and often more fluent speaking than reading. A system that answers only in English, or that answers in an Indian language without being measured in it, serves a subset of its users while appearing to serve all of them.</p>
+<p>This paper proposes a system in which these four properties are architectural commitments rather than features. Section II reviews related work. Section III describes the proposed system and its governing rules. Section IV describes the answering pipeline in detail. Section V reports measured results, including defects that measurement exposed. Section VI discusses outcomes and impact, and Section VII concludes.</p>
+<h2 class="sec">II. R<span class="sc">elated work</span></h2>
+<p>Retrieval-augmented generation grounds a language model&#x27;s output in retrieved documents and is now the dominant architecture for question answering over a private corpus [1], [2]. Adaptive learning platforms have integrated large language models to personalise instruction and provide continuous feedback [1], demonstrating that a retrieval-grounded assistant can be embedded in an institutional workflow. The literature reports substantial reduction in unsupported assertion relative to unconditioned generation.</p>
+<p>Reported evaluation nonetheless concentrates on answer quality and user engagement rather than on the verifiability of individual claims. Where citation is discussed, it is generally treated as a presentation feature: the retrieved passages are displayed alongside a generated answer, without a mechanism guaranteeing that the answer&#x27;s claims are entailed by those passages. Recent work on attribution has begun to address this gap by scoring whether generated statements are supported by cited sources, but the resulting signal is typically surfaced as a confidence indicator rather than used to withhold output.</p>
+<p>Gamification and engagement research in learning platforms demonstrates that system design shapes user behaviour in ways beyond the informational [3], [4], [6]. This finding transfers to the present setting with an inverted sign: a helpdesk whose refusals are styled as errors teaches its users that &quot;I do not know&quot; means &quot;the system is broken&quot;, and thereby erodes trust in the refusals that protect them. The visual and protocol treatment of a refusal is therefore a correctness concern, not a cosmetic one.</p>
+<p>Modular client-server architectures are widely adopted for scalability and independent evolution of interface and logic [2], [5], and the present system follows that convention. Bibliometric analysis of two decades of learning management system research documents both breadth of adoption and a persistent gap between content delivery and meaningful engagement [7]; the analogous gap in an administrative helpdesk is between document delivery and an answer a user can act upon with confidence.</p>
+<p>The contribution of this paper is therefore not retrieval-augmented generation itself, which is established, but a set of governance mechanisms layered upon it: structural enforcement of citation, ordering of contradiction detection before confidence thresholding, suppression rather than annotation of unsupported generation, and treatment of refusal as a successful outcome.</p>
+<h2 class="sec">III. P<span class="sc">roposed system</span></h2>
+<h3 class="sub">A. Governing Rules</h3>
+<p>The system is specified by rules that hold for every answer on every surface. They are stated here because the architecture follows from them rather than the reverse.</p>
+<p><strong>R1 &#8212; Citation is a precondition.</strong> An answer that cannot be attributed to at least one approved record is not shown. This is enforced at the type level: the result type representing a successful answer carries a non-empty citation collection, so a citation-free answer cannot be constructed.</p>
+<p><strong>R2 &#8212; Contradiction precedes confidence.</strong> Detection of disagreement between records occurs before the confidence threshold is applied. Two records that contradict each other are presented as a contradiction irrespective of either one&#x27;s score.</p>
+<p><strong>R3 &#8212; Unsupported generation is suppressed.</strong> A generated draft is verified sentence-by-sentence against the passages supplied to the generator. A draft that fails is discarded, not annotated, and an extractive answer quoting the record verbatim is returned in its place.</p>
+<p><strong>R4 &#8212; Refusal is an outcome, not an error.</strong> &quot;No reliable answer&quot; is returned with a success status and rendered as content. Refusals are never presented in the visual or protocol vocabulary of failure.</p>
+<p><strong>R5 &#8212; Answerability is decided at query time.</strong> An item&#x27;s eligibility to be cited is read from its lifecycle status inside the retrieval query itself. Retirement therefore takes effect on the next answer with no index rebuild or cache sweep.</p>
+<h3 class="sub">B. Architecture</h3>
+<p>The system follows a modular client-server architecture [2], [5]. Three browser-based surfaces &#8212; an agent console, a public assistant, and a curation and oversight console &#8212; communicate with a service layer over a documented interface. The service layer comprises a retrieval component, a relevance judging component, a generation component with two interchangeable strategies, a grounding verifier, a contradiction detector, and a lifecycle service governing the corpus. Persistent state is held in a relational store; corpus records, their lifecycle status, user accounts and the audit record share a single transactional boundary.</p>
+<p>A single component is the sole producer of answers. Every surface calls it, which is what makes rules R1 to R4 enforceable at one point rather than replicated across three consumers and liable to drift between them.</p>
+<h3 class="sub">C. Corpus Governance</h3>
+<p>Records progress through an explicit lifecycle: processing, pending review, approved, stale, superseded, retired, rejected. Only <em>approved</em> and <em>stale</em> records are answerable. A stale record &#8212; one past its review date &#8212; continues to answer while carrying a review-pending indication, on the reasoning that dated guidance accompanied by a warning serves a user better than silence, provided the warning is present.</p>
+<p>Supersession takes effect immediately. A monotonic generation counter is incremented within the same database transaction as any lifecycle change, and every cached answer is keyed on that counter. A change therefore renders all prior cache entries unreachable atomically, with no invalidation scan to implement incorrectly. Where the counter cannot be read, the cache is bypassed rather than trusted, so a database outage cannot cause a stale answer to be served against an unverifiable knowledge state. The lifecycle and its transitions are shown in Fig. 2.</p>
+<figure class="ieee"><pre class="fig">   processing ──▶ pending review ──▶ approved ──▶ stale
+        │               │               │  │        │
+        ▼               ▼               │  │        │
+     failed          rejected           │  └────────┴──▶ retired
+        │                               │                   ▲
+        └──▶ (resubmission)             └──▶ superseded ─────┘
+                                                 │
+                                                 └──▶ approved (reversal, reason required)
+
+   answerable set = { approved, stale }
+
+   every transition ──▶ generation counter += 1  (same transaction)
+                    ──▶ audit record             (same transaction)
+                    ──▶ all cached answers unreachable</pre><figcaption>Fig. 2. Record lifecycle. Only approved and stale records may be cited. A stale record continues to answer with a review-pending indication. Every transition increments a generation counter within the same transaction as the state change and as the audit write, so supersession takes effect on the next answer and no cached answer can outlive the knowledge state that produced it.</figcaption></figure>
+<h2 class="sec">IV. W<span class="sc">orking principle of the proposed system</span></h2>
+<p>Fig. 1 shows the answer pipeline and the position at which each rule of Section III.A takes effect. The ordering is the contribution: contradiction detection precedes the confidence threshold, and grounding verification precedes citation assembly.</p>
+<figure class="ieee"><pre class="fig">                     ┌──────────────────┐
+                     │  Question        │
+                     └────────┬─────────┘
+                              ▼
+                     ┌──────────────────┐
+                     │ Coverage &amp;       │   public surface only
+                     │ fair-use gate    │
+                     └────────┬─────────┘
+                              ▼
+                     ┌──────────────────┐
+                     │ Language check   │   enabled languages only
+                     └────────┬─────────┘
+                              ▼
+                     ┌──────────────────┐
+                     │ Answer cache     │   keyed on generation counter
+                     └────────┬─────────┘
+                              ▼
+                     ┌──────────────────┐
+                     │ BM25 retrieval   │   answerable records only  ── R5
+                     │ + expansion      │
+                     └────────┬─────────┘
+                              ▼
+                     ┌──────────────────┐
+                     │ Relevance        │   confidence is derived here,
+                     │ judging          │   not from lexical overlap
+                     └────────┬─────────┘
+                              ▼
+                        ╱───────────╲
+                       ╱ Contradict? ╲──── yes ──▶ show both, choose neither
+                       ╲             ╱             ── R2: BEFORE the bar
+                        ╲───────────╱
+                              │ no
+                              ▼
+                        ╱───────────╲
+                       ╱ ≥ answer    ╲──── no ───▶ refuse, offer a person
+                       ╲   bar?      ╱             ── R4: returned as success
+                        ╲───────────╱
+                              │ yes
+                              ▼
+                     ┌──────────────────┐
+                     │ Generation       │
+                     └────────┬─────────┘
+                              ▼
+                        ╱───────────╲
+                       ╱  Grounded?  ╲──── no ───▶ discard draft,
+                       ╲             ╱             quote record verbatim ── R3
+                        ╲───────────╱
+                              │ yes
+                              ▼
+                     ┌──────────────────┐
+                     │ Citations        │   non-empty by construction ── R1
+                     └────────┬─────────┘
+                              ▼
+                     ┌──────────────────┐
+                     │ Persist, then    │   an unrecorded answer is not shown
+                     │ return           │
+                     └──────────────────┘</pre><figcaption>Fig. 1. Answer pipeline. Rules R1&#8211;R5 are enforced at the marked positions. Contradiction detection precedes confidence thresholding, so a disagreement is reported irrespective of either record&#x27;s score; grounding failure suppresses the draft rather than annotating it.</figcaption></figure>
+<h3 class="sub">A. Retrieval</h3>
+<p>Retrieval combines a lexical index with domain-specific query expansion. Passages are indexed under BM25 with the record title weighted into the document representation; a record whose title matches a query but whose body does not would otherwise be unreachable, a defect observed during development and reported in Section V.</p>
+<p>Three transformations proved necessary on the query side. Light suffix stemming with an irregular-form table unifies inflections, without which a question asking whether a buyer is <em>paying</em> fails to reach a record stating when a buyer must <em>pay</em>. Acronym expansion maps the forms practitioners actually type &#8212; IEC, RoDTEP, TReDS, SCOMET &#8212; to the expanded terms records use. Hyphenated compounds are normalised so that <em>ecommerce</em> meets <em>e-commerce</em>.</p>
+<p>Candidate scores are attenuated by the square root of the proportion of query terms a passage addresses. Unattenuated BM25 rewards a single rare term heavily, which permits a lookalike record to answer on one shared word.</p>
+<h3 class="sub">B. Relevance Judging</h3>
+<p>BM25 answers which passages share vocabulary with a query. This is a different question from which passage <em>answers</em> it, and the gap between the two is the source of a specific failure mode: asked to define one technical term, lexical retrieval returns a record about a different term sharing one word, at maximum confidence. No lexical threshold separates these cases, because the deficiency is in what the score measures rather than in its magnitude.</p>
+<p>The system therefore derives confidence from a relevance judging stage that scores whether each candidate answers the question asked, discriminating a record about a similar-sounding but different instrument from one that is responsive. Candidates are judged in a single batched call. Where judging is unavailable, confidence is capped below the answer threshold rather than falling back to the lexical score &#8212; a lexical score is evidence of shared vocabulary, and admitting it as relevance confidence is what permits an unrelated question to be answered confidently.</p>
+<h3 class="sub">C. Contradiction Detection</h3>
+<p>Contradiction detection runs on the judged candidate set before thresholding. Two records are treated as contradictory when they exhibit high topical overlap together with a polarity asymmetry &#8212; a negation or exemption marker present on one side only &#8212; and when their scores are comparable. The comparability requirement matters: without it, a weak tangential passage containing a negation can veto a strong well-supported answer, withholding good information in the name of caution.</p>
+<p>Where a contradiction is found, both records are returned with their issuing authorities and issue dates, and the system explicitly declines to choose. A contradiction is never counted as an answer for the purpose of service metrics.</p>
+<h3 class="sub">D. Generation and Grounding</h3>
+<p>Generation is a strategy behind a single interface, with two implementations: a language model conditioned on the retrieved passages, and an extractive strategy returning the highest-ranked passage verbatim. The second is not an error path but a designed degradation: it is the operating mode where no model is available, and the destination of every failure in the generation path.</p>
+<p>Every generated draft is verified before display. Each sentence is checked for lexical support within a <em>single</em> passage &#8212; not the union of passages, since a claim assembled from fragments of several sources is supported by none of them. A draft is accepted only when coverage exceeds a threshold <em>and</em> no sentence is unsupported; high aggregate coverage with one unsupported sentence still constitutes an answer containing a claim the sources do not make. A failed draft is discarded and the extractive strategy substituted.</p>
+<h3 class="sub">E. Multilingual Operation</h3>
+<p>Six languages are supported. A language is enabled only when it has cleared a measured correctness threshold on its own portion of an acceptance set; until then the system states that support is in preparation rather than answering in it badly. Enabling a language requires an acceptance score to be recorded, since an enablement with no recorded measurement is indistinguishable from ignoring the gate.</p>
+<p>The quoted passage always appears in its source language, labelled, and is never translated: a translated quotation is no longer evidence. Interface typography is keyed on <em>script</em> rather than language, because Devanagari and Tamil require greater line height than Latin at equal nominal size, and Hindi and Marathi share a script &#8212; a mapping keyed on language would require both to be enumerated and would silently omit any future language in that script.</p>
+<h3 class="sub">F. Voice Interaction</h3>
+<p>A hands-free conversational mode addresses a user population more fluent speaking than typing, and for whom composing a question in Devanagari or Tamil on a mobile keyboard is itself a barrier to asking. The loop is explicit: listen until a natural pause, transcribe, answer, speak, listen again. The system does not listen while speaking, which would transcribe its own output. What is spoken differs from what is displayed: a citation&#x27;s file reference and issue date support visual checking, and reading them aloud buries the answer, so the source is named once in prose.</p>
+<h3 class="sub">G. Self-Updating Knowledge</h3>
+<p>Questions the system cannot answer are logged, and a record may be drafted automatically so that the same question is answerable subsequently. Two constraints govern this.</p>
+<p>First, a machine-drafted record carries its own authority attribution and is visually distinguished wherever cited. Auto-drafted knowledge that is indistinguishable from a published circular would defeat the entire provenance argument.</p>
+<p>Second, drafting is refused for any question turning on a specific figure &#8212; a rate, ceiling, deadline or monetary threshold. A model asked for such a figure will supply one, and a plausible invented number is precisely the harm the citation rule exists to prevent. The refusal and its reason are displayed rather than hidden.</p>
+<h2 class="sec">V. R<span class="sc">esults and discussion</span></h2>
+<h3 class="sub">A. Experimental Setting</h3>
+<p>The corpus comprises 51 records and 107 passages spanning registration, customs procedure, taxation, micro and small enterprise finance, e-commerce obligation, standards and trade policy. Procedures, terminology and document structures follow the administration&#x27;s actual practice; specific rates and thresholds are illustrative and marked as such throughout the interface. Evaluation used a set of 30 questions written in the phrasing a practitioner would use, together with a control set of out-of-domain questions.</p>
+<h3 class="sub">B. Answer Rate and Refusal Accuracy</h3>
+<p>TABLE I. OUTCOME DISTRIBUTION ON THE EVALUATION SET</p>
+<table class="ieee"><thead><tr><th>Question class</th><th>n</th><th>Answered with citation</th><th>Contradiction</th><th>Refused</th></tr></thead><tbody><tr><td>In-domain practitioner questions</td><td>30</td><td>30</td><td>0</td><td>0</td></tr><tr><td>Deliberate contradiction</td><td>1</td><td>0</td><td>1</td><td>0</td></tr><tr><td>Out-of-domain control</td><td>6</td><td>0</td><td>0</td><td>6</td></tr></tbody></table>
+<p>Every in-domain question was answered with at least one citation naming an issuing authority and issue date. Every out-of-domain question was refused. The deliberately contradictory pair was surfaced as a contradiction rather than resolved.</p>
+<h3 class="sub">C. Ablation of the Relevance Judge</h3>
+<p>TABLE II. EFFECT OF THE CONFIDENCE SOURCE</p>
+<table class="ieee"><thead><tr><th>Confidence source</th><th>In-domain answered</th><th>Out-of-domain incorrectly answered</th></tr></thead><tbody><tr><td>Lexical (BM25 + coverage)</td><td>27/30</td><td>3/6</td></tr><tr><td>Relevance judging</td><td>30/30</td><td>0/6</td></tr></tbody></table>
+<p>With lexical confidence alone, three out-of-domain questions were answered from topically adjacent records at maximum confidence &#8212; including one general-knowledge question answered from a trade policy record. Lowering the threshold to admit more in-domain questions increased this error; raising it suppressed valid answers. The failure was not in the threshold&#x27;s value but in the quantity being thresholded. Substituting relevance judging permitted the threshold to be restored to its original specified value while eliminating the errors.</p>
+<h3 class="sub">D. Defects Exposed by Measurement</h3>
+<p>Several defects survived component-level testing and were exposed only by end-to-end measurement. They are reported because their character is instructive.</p>
+<p><strong>Title-only records were unreachable.</strong> Retrieval indexed passage bodies while the reranker scored bodies alone; a record naming its subject only in its title was retrieved and then reordered away, causing a different record to be cited. Component tests passed because each stage was individually correct.</p>
+<p><strong>Cache rehydration lost type information.</strong> Cached citations serialised to JSON returned dates as strings, causing failure on the cache-hit path only. Eighteen unit tests passed throughout because none asserted on the <em>types</em> of a rehydrated citation.</p>
+<p><strong>Inflection blocked retrieval.</strong> A question using one verb form failed to reach a record using another, while a near-identical question succeeded &#8212; a discrepancy invisible to any single test case.</p>
+<p><strong>Blocked outcomes were recorded as refusals.</strong> A surface closed by policy produced both a policy message and a &quot;no reliable answer&quot; message, and incremented the counter that triggers automatic escalation. Two distinct conditions had been conflated in the outcome model.</p>
+<p><strong>Weak passages vetoed strong answers.</strong> An early contradiction heuristic required <em>low</em> vocabulary overlap, inverting the intended signal: genuine contradictions exhibit <em>high</em> overlap with a polarity difference. The heuristic would have missed every real contradiction.</p>
+<h3 class="sub">E. Latency</h3>
+<p>TABLE III. STAGE LATENCY BUDGET</p>
+<table class="ieee"><thead><tr><th>Stage</th><th>Budget (ms)</th><th>Degradation on timeout</th></tr></thead><tbody><tr><td>Language detection</td><td>30</td><td>Fall back to selected language</td></tr><tr><td>Query embedding</td><td>120</td><td>Lexical retrieval only</td></tr><tr><td>Retrieval</td><td>250</td><td>Report assist unavailable</td></tr><tr><td>Relevance judging</td><td>400</td><td>Cap confidence below threshold</td></tr><tr><td>Contradiction detection</td><td>50</td><td>Treat as no contradiction</td></tr><tr><td>Generation, first token</td><td>700</td><td>Extractive strategy</td></tr><tr><td>Generation, complete</td><td>2500</td><td>Truncate at sentence boundary</td></tr><tr><td>Grounding verification</td><td>150</td><td>Suppress draft, use extractive</td></tr><tr><td>Persistence and audit</td><td>100</td><td>Fail request; answer not shown</td></tr></tbody></table>
+<p>Stage budgets sum to 4 350 ms against a 5 000 ms target. Per-stage timeouts alone proved insufficient: their sum substantially exceeds the target, so several stages running slowly without individually timing out can breach it. A whole-request deadline was added, clamping each stage to the remaining budget and declining to begin generation it cannot complete. Every degradation resolves toward showing less rather than showing something unverified.</p>
+<h3 class="sub">F. Limitations</h3>
+<p>Retrieval is lexical, so a question phrased distantly from the corpus vocabulary may be refused although the answer is present. Relevance judging depends on an external model and degrades to refusal when unavailable &#8212; a safe failure, but a reduction in service. The corpus is illustrative and small; the reported answer rate characterises the mechanism, not performance at production corpus scale. Correctness was assessed by the authors against known-correct records rather than by independent domain assessors. Per-language correctness was not separately measured, which is why the enablement gate exists rather than being assumed satisfied.</p>
+<h2 class="sec">VI. E<span class="sc">xpected outcomes and impact</span></h2>
+<p><strong>Verifiability as a default.</strong> Every answer carries the record it came from, its issuing authority and its issue date. A user can check the basis of guidance rather than trusting it, and a supervisor reviewing a disputed answer can reconstruct what was shown and on what basis. The audit record is append-only, enforced by withholding the database privilege rather than by application discipline.</p>
+<p><strong>Reduced confident error.</strong> Refusal is designed to be inexpensive and unembarrassing for the system, and every degradation path resolves toward showing less. In a domain where a wrong answer produces a held consignment or a forfeited incentive, the asymmetry between an admitted gap and a confident error justifies this bias.</p>
+<p><strong>Amendment takes effect immediately.</strong> Retiring a superseded record removes it from the next answer, including from answers already cached. Where guidance is amended continuously, this is the difference between a knowledge base and an archive.</p>
+<p><strong>Contradiction becomes visible work.</strong> Records that disagree surface as a disagreement and enter a queue for human resolution, rather than being silently resolved by ranking.</p>
+<p><strong>Access widens.</strong> Six languages with per-script typography and hands-free voice interaction extend the service to users for whom a keyboard in an unfamiliar script is a barrier. The enablement gate ensures that widening access does not mean answering badly in a language that has not been measured.</p>
+<p><strong>Institutional knowledge accumulates.</strong> Questions that cannot be answered are logged rather than lost, and may be drafted into records, while questions turning on specific figures are deliberately reserved for human authorship.</p>
+<h2 class="sec">VII. C<span class="sc">onclusion</span></h2>
+<p>This paper has argued that for question answering in a consequential administrative domain, provenance must be an architectural precondition rather than a presentation feature. The proposed system enforces four rules structurally: citation is required for an answer to exist, contradiction is detected before confidence is thresholded, unsupported generation is suppressed rather than annotated, and refusal is a successful outcome rather than an error.</p>
+<p>Measurement over a trade corpus showed every in-domain question answered with citation and every out-of-domain question refused, and demonstrated that the choice of <em>what</em> confidence measures &#8212; rather than the threshold applied to it &#8212; determines whether unrelated questions are answered. Several defects were exposed only by end-to-end measurement while passing component-level tests, which suggests that systems making guarantees of this kind require tests asserting on the guarantee itself rather than on the correctness of each stage.</p>
+<p>Future work includes semantic retrieval to reduce refusals caused by vocabulary mismatch, independent domain-expert assessment of answer correctness, per-language measurement to populate the enablement gate with evidence, and evaluation at production corpus scale where contradiction between records is common rather than deliberately introduced.</p>
+<h2 class="sec refs-head">R<span class="sc">EFERENCES</span></h2>
+<p class="ref">[1] K. Spriggs, M. C. Lau, K. Passi, and L. Zhang, &quot;Personalizing Education through an Adaptive LMS with Integrated LLMs,&quot; <em>arXiv preprint</em> arXiv:2502.08655, 2025.</p>
+<p class="ref">[2] J. P. B. Saputra, H. Prabowo, F. L. Gaol, and G. F. Hertono, &quot;Development of Gamification-Based Learning Management System (LMS) with Agile Approach and Personalization of FSLSM Learning Style to Improve Learning Effectiveness,&quot; <em>Journal of Applied Data Sciences</em>, vol. 6, no. 1, pp. 714&#8211;725, 2025.</p>
+<p class="ref">[3] E. T. Setyoadi, S. Patmanthara, H. W. Herwanto, H. Junaedi, and T. Rahmawati, &quot;A Review of Learning Management System Enhanced by Gamification Through Push Pool Mooring Model,&quot; <em>IRDH International Journal of Technology, Agriculture Natural Sciences</em>, vol. 2, no. 1, 2025.</p>
+<p class="ref">[4] K. Nazokat, &quot;The Role of Digital Gamification in Enhancing Student Motivation,&quot; <em>International Multidisciplinary Journal for Research Development</em>, vol. 12, no. 1, 2025.</p>
+<p class="ref">[5] K. N. H., &quot;E-Learning Management Systems: Best Practices for Implementation,&quot; <em>Research Invention Journal of Current Issues in Arts and Management</em>, vol. 4, no. 2, pp. 43&#8211;47, 2025.</p>
+<p class="ref">[6] M. Ortiz-Rojas, K. Chiluiza, M. Valcke, and C. Bolanos-Mendoza, &quot;How Gamification Boosts Learning in STEM Higher Education: A Mixed Methods Study,&quot; <em>International Journal of STEM Education</em>, vol. 12, no. 1, 2025.</p>
+<p class="ref">[7] T.-T. T. Phan, C.-T. Vu, P.-T. T. Doan, D. Luong, T. Bui, T.-H. Le, and D. Nguyen, &quot;Two Decades of Studies on Learning Management System in Higher Education: A Bibliometric Analysis with Scopus Database 2000&#8211;2020,&quot; <em>Journal of University Teaching Learning Practice</em>, vol. 19, no. 3, 2022.</p>
+<p class="ref">[8] A. Malik, G. Dargar, A. Sharma, and P. Pandey, &quot;Predictive Analysis for Retail Shops using Machine Learning for Maximizing Revenue,&quot; in <em>Proc. 7th Int. Conf. Intelligent Computing and Control Systems (ICICCS)</em>, Madurai, India, 2023, pp. 126&#8211;133.</p>
+<p class="ref">[9] A. Sharma, R. P. Mahapatra, and V. K. Sharma, &quot;An exploration of Fog procedures in comparison with IoT, design, and assessment issues,&quot; in <em>Proc. 10th Int. Conf. Reliability, Infocom Technologies and Optimization (ICRITO)</em>, Noida, India, 2022, pp. 1&#8211;6.</p>
+<p class="ref">[10] A. Sharma, A. Vashishta, A. Shahi, A. Saxena, and H. K. Gulati, &quot;Study of Video Suggestions based on Calendar Events,&quot; in <em>Proc. 6th Int. Conf. Intelligent Computing and Control Systems (ICICCS)</em>, Madurai, India, 2022, pp. 1572&#8211;1579.</p>
+</div>
+</body></html>

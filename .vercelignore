@@ -1,0 +1,12 @@
+backend/.venv
+backend/data
+backend/tests
+docs
+netlify
+paper
+ops
+frontend
+.ai
+*.db
+*.db-wal
+*.db-shm
