@@ -17,7 +17,11 @@ from pathlib import Path
 import httpx
 from uuid import UUID, uuid4
 
-from fastapi import Cookie, FastAPI, File, Form, HTTPException, Response, UploadFile
+import json
+from dataclasses import replace
+
+from fastapi import (Cookie, FastAPI, File, Form, HTTPException, Request, Response,
+                     UploadFile)
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -30,6 +34,15 @@ from app.demo.programmes import (DEADLINES, NOTICES, SCHEMES, SECTORS, TARIFF,
                                  eligible)
 from app.demo.accounts import Accounts
 from app.demo.attachments import ExtractionFailed, as_passages, extract
+from app.demo.actions import CATALOGUE as ACTION_CATALOGUE, Actions, offers_for
+from app.demo.eligibility import (QUESTIONS, TURNOVER_BANDS,
+                                   state as eligibility_state)
+from app.core.tracing import tracer
+from app.services.answer_translation import AnswerTranslator
+from app.demo.feedback import FeedbackStore
+from app.demo.feeds import SOURCES as FEED_SOURCES, FeedWatcher
+from app.demo.language_gate import LanguageGate, measure as language_measure
+from app.demo.whatsapp import WhatsAppChannel
 from app.demo.grievances import Grievances
 from app.models.bhashini import ISO3_TO_BHASHINI, BhashiniClient, BhashiniUnavailable
 from app.demo.opendata import CATALOGUE, OpenDataClient
@@ -65,6 +78,16 @@ accounts = Accounts(settings.database_path)
 learning = LearningLog(settings)
 grievances = Grievances(settings.database_path)
 bhashini = BhashiniClient(settings)
+feedback = FeedbackStore(settings.database_path)
+language_gate = LanguageGate()
+actions = Actions(settings.database_path)
+
+_feed_sources = {k: dict(v) for k, v in FEED_SOURCES.items()}
+_feed_sources["dgft_regulatory"]["feed_url"] = settings.dgft_feed_url
+_feed_sources["cbic_customs"]["feed_url"] = settings.cbic_feed_url
+feeds = FeedWatcher(settings.database_path, _feed_sources)
+whatsapp = WhatsAppChannel(settings.whatsapp_token, settings.whatsapp_phone_number_id,
+                           settings.whatsapp_verify_token, settings.whatsapp_app_secret)
 opendata = OpenDataClient(settings.data_gov_api_key)
 verifier = BusinessVerifier(settings.apisetu_api_key, settings.apisetu_client_id)
 
@@ -204,6 +227,8 @@ answer_service = AnswerService(
 from app.services.query_rewrite import QueryRewriter  # noqa: E402
 
 answer_service._rewriter = QueryRewriter(settings)
+answer_service._feedback = feedback
+answer_service._translator = AnswerTranslator(settings, bhashini)
 
 app = FastAPI(title="Smart Contact-Center Knowledge Platform — demo", version="0.1.0")
 
@@ -226,6 +251,9 @@ def _serialise(result) -> dict:  # noqa: ANN001
         "confidence": float(result.confidence) if result.confidence is not None else None,
         "stale_sources": result.stale_sources,
         "handover_offered": result.handover_offered,
+        # What the desk can actually do about this answer, offered from what the answer
+        # contains rather than from a fixed menu.
+        "actions": [o.as_dict() for o in offers_for(result)],
         "retry_after_seconds": result.retry_after_seconds,
         "latency_ms": result.latency_ms,
         "citations": [
@@ -363,7 +391,16 @@ def set_status(item_id: UUID, body: StatusBody) -> dict:
         raise HTTPException(404, "unknown item")
     store.set_status(item_id, body.status)
     new_generation = generation.bump()
-    return {"status": body.status, "generation": new_generation}
+
+    # Anyone who acted on this record is the person the change matters to. Telling them
+    # is the point of letting them watch it: guidance changing silently under somebody
+    # who already relied on it is the failure the lifecycle exists to prevent.
+    told = 0
+    if body.status in ("superseded", "retired", "stale"):
+        told = actions.notify_watchers(str(item_id), body.status)
+
+    return {"status": body.status, "generation": new_generation,
+            "watchers_notified": told}
 
 
 @app.get("/api/v1/demo/state")
@@ -404,8 +441,39 @@ def update_state(body: SettingsBody) -> dict:
     if body.answer_bar is not None:
         thresholds.set("answer_bar", body.answer_bar)
     if body.enabled_languages is not None:
-        languages.enabled = set(body.enabled_languages)
+        # The gate, enforced. Previously a language could be switched on by naming it,
+        # which made an enablement backed by a measurement indistinguishable from one
+        # that ignored the gate — and the second kind is a promise the desk cannot keep.
+        requested = set(body.enabled_languages)
+        allowed, refused = set(), {}
+        for code in requested:
+            ok, why = language_gate.may_enable(code)
+            (allowed.add(code) if ok else refused.__setitem__(code, why))
+        languages.enabled = allowed
+        if refused:
+            log.warning("language.enable_refused", languages=sorted(refused))
+            return {**state(), "refused_languages": refused}
     return state()
+
+
+@app.get("/api/v1/demo/languages/gate")
+def language_gate_report() -> dict:
+    return language_gate.report()
+
+
+@app.post("/api/v1/demo/languages/{code}/measure")
+async def measure_language(code: str) -> dict:
+    """Run the acceptance question set for a language and record the score.
+
+    Recording is the point. A language enabled without a score on file cannot be
+    audited later, and 'we tested it' is not a measurement.
+    """
+    try:
+        score = await language_measure(code, answer_service, AGENT)
+    except KeyError as exc:
+        raise HTTPException(404, f"No acceptance questions for {code!r}.") from exc
+    language_gate.record(score)
+    return score.as_dict()
 
 
 # ======================================================================================
@@ -557,16 +625,307 @@ def reply(conversation_id: UUID, body: ReplyBody) -> dict:
 
 class RatingBody(BaseModel):
     rating: int
+    #: The question and the record it was answered from. Without both, a rating cannot
+    #: be attached to anything and is recorded but not acted upon.
+    query: str = ""
+    item_id: str = ""
+    item_title: str = ""
+    note: str = ""
 
 
 @app.post("/api/v1/demo/answers/{answer_id}/rating")
-def rate(answer_id: UUID, body: RatingBody) -> dict:
+def rate(answer_id: UUID, body: RatingBody, request: Request,
+         scc_session: str | None = Cookie(default=None)) -> dict:
+    """Record a rating and act on it.
+
+    Previously this wrote to the audit log and was read by nothing, which asked people
+    to spend attention marking answers wrong and spent none of its own in return.
+    """
     if body.rating not in (-1, 1):
         raise HTTPException(422, "rating must be -1 or 1")
+
     found = workspace.rate(answer_id, body.rating, "Anjali")
-    if not found:
-        raise HTTPException(404, "no assist usage recorded for that answer")
-    return {"rated": body.rating}
+
+    outcome = None
+    if body.query and body.item_id:
+        user = _me(scc_session)
+        outcome = feedback.rate(
+            body.query, body.item_id, body.rating,
+            item_title=body.item_title, note=body.note,
+                # Most people rating a public helpdesk are not signed in. A single
+            # literal "anonymous" would make every visitor one rater, so two people
+            # reporting the same wrong answer would count once and suppression could
+            # never be reached. The client address separates them while still
+            # stopping one person clicking twice.
+            rater=(user.email if user else f"anon:{request.client.host if request.client else 'unknown'}"),
+        )
+        if outcome.suppressed:
+            # A withheld pairing changes what the desk will answer, so every cached
+            # answer must become unreachable — the same rule a lifecycle change obeys.
+            generation.bump()
+
+    return {
+        "rated": body.rating,
+        "assist_usage_found": found,
+        **(outcome.as_dict() if outcome else
+           {"message": "Recorded.", "suppressed": False}),
+    }
+
+
+# --- WhatsApp channel -----------------------------------------------------------------
+# The same AnswerService serves this channel. A looser standard for a casual medium
+# would be the worst thing to grow here: the person on WhatsApp has less ability to
+# check a claim than the one looking at the evidence panel, not more.
+
+@app.get("/api/v1/demo/whatsapp/webhook")
+def whatsapp_verify(request: Request) -> Response:
+    q = request.query_params
+    challenge = whatsapp.verify(q.get("hub.mode", ""), q.get("hub.verify_token", ""),
+                                q.get("hub.challenge", ""))
+    if challenge is None:
+        raise HTTPException(403, "Verification failed.")
+    return Response(content=challenge, media_type="text/plain")
+
+
+@app.post("/api/v1/demo/whatsapp/webhook")
+async def whatsapp_inbound(request: Request) -> dict:
+    raw = await request.body()
+    if not whatsapp.signature_ok(raw, request.headers.get("X-Hub-Signature-256")):
+        # Checked before the body is parsed. An unsigned webhook is rejected whether
+        # or not it looks well-formed.
+        raise HTTPException(403, "Bad signature.")
+
+    payload = json.loads(raw or b"{}")
+    handled = 0
+    for message in WhatsAppChannel.parse(payload):
+        if message.kind == "audio" and message.audio_id:
+            audio = await whatsapp.fetch_audio(message.audio_id)
+            text = ""
+            if audio and bhashini.available:
+                try:
+                    text = await bhashini.transcribe(audio, "hin", audio_format="ogg")
+                except Exception:  # noqa: BLE001
+                    text = ""
+            if not text:
+                await whatsapp.send(message.from_number,
+                                    "I could not make out that voice note. "
+                                    "Please type the question.")
+                continue
+            message = replace(message, text=text)
+        elif message.kind != "text" or not message.text:
+            await whatsapp.send(message.from_number,
+                                "I can read text and voice notes. Please send one of "
+                                "those.")
+            continue
+
+        await _whatsapp_reply(message)
+        handled += 1
+    return {"handled": handled}
+
+
+async def _whatsapp_reply(message) -> None:  # noqa: ANN001
+    word = message.text.strip().upper()
+    if word == "AGENT":
+        await whatsapp.send(message.from_number,
+                            "Put through to a person. Somebody will reply here.")
+        workspace.write_audit("whatsapp_handover", "system", "conversation",
+                              message.from_number)
+        return
+    if word == "GRIEVANCE":
+        await whatsapp.send(
+            message.from_number,
+            "Send your complaint as one message beginning with the word GRIEVANCE, "
+            "and you will get a tracking reference.")
+        return
+    if word.startswith("GRIEVANCE "):
+        detail = message.text.strip()[len("GRIEVANCE "):].strip()
+        lodged = grievances.lodge(detail[:80], detail, contact=message.from_number)
+        await whatsapp.send(
+            message.from_number,
+            f"Lodged. Your reference is *{lodged['reference']}*.\n"
+            f"With {lodged['assigned_to']}, {lodged['authority']}.\n"
+            f"Reply *STATUS {lodged['reference']}* at any time.")
+        return
+    if word.startswith("STATUS "):
+        found = grievances.track(word[len("STATUS "):].strip())
+        if found is None:
+            await whatsapp.send(message.from_number, "No grievance with that reference.")
+            return
+        g = found.as_dict()
+        await whatsapp.send(
+            message.from_number,
+            f"*{g['reference']}* — {g['status']}\n{g['subject']}\n"
+            f"With {g['assigned_to']}, {g['authority']}."
+            + ("\n_Overdue; it has been escalated._" if g["overdue"] else ""))
+        return
+
+    result = await answer_service.answer(
+        AnswerRequest(query=message.text), Actor.public("whatsapp"))
+    await whatsapp.send(message.from_number, WhatsAppChannel.render(result))
+
+
+@app.get("/api/v1/demo/channels")
+def channels() -> dict:
+    """Which ways in are actually live. Stated, not implied."""
+    return {
+        "web": {"live": True},
+        "whatsapp": {"live": whatsapp.available,
+                     "signed": bool(settings.whatsapp_app_secret),
+                     "commands": ["AGENT", "GRIEVANCE <text>", "STATUS <ref>", "WRONG"]},
+        "voice": {"live": bool(settings.groq_api_key) or bhashini.available,
+                  "engine": "bhashini" if bhashini.available else "whisper"},
+    }
+
+
+# --- eligibility questionnaire ---------------------------------------------------------
+
+class EligibilityBody(BaseModel):
+    answers: dict[str, str] = {}
+
+
+@app.post("/api/v1/demo/eligibility")
+def eligibility_step(body: EligibilityBody,
+                     scc_session: str | None = Cookie(default=None)) -> dict:
+    """Narrow to the schemes a business qualifies for, one question at a time.
+
+    A question is returned only when the answer would change a verdict, so the
+    questionnaire ends as soon as the remaining schemes agree.
+    """
+    answers = {k: v for k, v in body.answers.items() if k in QUESTIONS}
+
+    # A signed-in person has already said some of this. Asking again is the fastest
+    # way to teach somebody that a form is not paying attention.
+    user = _me(scc_session)
+    if user:
+        prefs = user.preferences
+        for key, value in (("entity_type", prefs.entity_type),
+                           ("activity", prefs.activity),
+                           ("sector", prefs.sector)):
+            if value and key not in answers:
+                answers[key] = value
+        if prefs.turnover_cr is not None and "turnover_band" not in answers:
+            answers["turnover_band"] = next(
+                (k for k, _, v in TURNOVER_BANDS if prefs.turnover_cr <= v),
+                TURNOVER_BANDS[-1][0])
+
+    return eligibility_state(answers)
+
+
+@app.get("/api/v1/demo/eligibility/questions")
+def eligibility_questions() -> dict:
+    return {"questions": [{"key": k, **v} for k, v in QUESTIONS.items()],
+            "turnover_bands": [{"value": k, "label": lbl}
+                               for k, lbl, _ in TURNOVER_BANDS]}
+
+
+# --- tracing --------------------------------------------------------------------------
+
+@app.get("/api/v1/demo/traces")
+def traces(limit: int = 20) -> dict:
+    """Per-stage timings for recent requests.
+
+    Operational record, not transcript: question and passage text are withheld unless
+    SCC_TRACE_CONTENT is set for debugging.
+    """
+    return {"summary": tracer.summary(), "recent": tracer.recent(limit)}
+
+
+@app.get("/api/v1/demo/traces/otlp")
+def traces_otlp(limit: int = 50) -> dict:
+    """Recent spans in OTLP/JSON, for Langfuse, Grafana, Jaeger or any collector."""
+    return tracer.otlp(limit)
+
+
+# --- actions --------------------------------------------------------------------------
+# Every action is inside this system's own authority and is reversible. Nothing here
+# files anything with DGFT, CBIC or GSTN: this desk explains their processes, it has no
+# standing to act inside them, and an action that appeared to would be believed.
+
+class ActionBody(BaseModel):
+    kind: str
+    payload: dict = {}
+    contact: str = ""
+
+
+@app.post("/api/v1/demo/actions")
+def run_action(body: ActionBody,
+               scc_session: str | None = Cookie(default=None)) -> dict:
+    user = _me(scc_session)
+    try:
+        return actions.run(body.kind, body.payload,
+                           user_id=user.id if user else None,
+                           contact=body.contact, grievances=grievances)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
+@app.get("/api/v1/demo/actions/catalogue")
+def action_catalogue() -> dict:
+    return {
+        "actions": [{"kind": k, "label": lbl, "detail": detail}
+                    for k, (lbl, detail) in ACTION_CATALOGUE.items()],
+        "summary": actions.summary(),
+        "note": ("This desk prepares and tracks. It does not submit anything to any "
+                 "department on your behalf."),
+    }
+
+
+@app.get("/api/v1/demo/me/actions")
+def my_actions(scc_session: str | None = Cookie(default=None)) -> dict:
+    user = _me(scc_session)
+    if not user:
+        raise HTTPException(401, "Sign in to see what you have asked the desk to do.")
+    return {"actions": actions.for_user(user.id)}
+
+
+# --- departmental feeds ---------------------------------------------------------------
+
+@app.get("/api/v1/demo/feeds")
+def feed_status() -> dict:
+    return {"summary": feeds.summary(), "pending": feeds.pending(20)}
+
+
+@app.post("/api/v1/demo/feeds/{source}/poll")
+async def poll_feed(source: str) -> dict:
+    try:
+        return await feeds.poll(source)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+
+@app.get("/api/v1/demo/feeds/drafts")
+def feed_drafts(limit: int = 20) -> dict:
+    """Feed entries as records a curator can review. None of them can answer yet."""
+    return {"drafts": feeds.to_records(limit)}
+
+
+@app.get("/api/v1/demo/curation/tasks")
+def curation_tasks(state: str = "open") -> dict:
+    """What ratings have asked a person to look at."""
+    return {"tasks": feedback.tasks(state), "summary": feedback.summary()}
+
+
+class TaskResolveBody(BaseModel):
+    state: str
+    resolution: str = ""
+
+
+@app.post("/api/v1/demo/curation/tasks/{task_id}")
+def resolve_curation_task(task_id: int, body: TaskResolveBody) -> dict:
+    """Close a task as record_wrong, retrieval_wrong or rating_wrong."""
+    try:
+        ok = feedback.resolve_task(task_id, body.state, body.resolution)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    if not ok:
+        raise HTTPException(404, "No such task.")
+    if body.state == "rating_wrong":
+        generation.bump()
+    return {"resolved": body.state, "summary": feedback.summary()}
 
 
 @app.get("/api/v1/demo/conversations/{conversation_id}")

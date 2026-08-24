@@ -24,6 +24,7 @@ from uuid import UUID
 from app.core.config import Settings
 from app.core.deadline import Deadline
 from app.core.logging import get_logger
+from app.core.tracing import tracer
 from app.domain.errors import LanguageNotEnabled, ModelUnavailable
 from app.domain.state import AnswerOutcome
 from app.models.breaker import CircuitOpen
@@ -129,6 +130,17 @@ class AnswerService:
         self._embedder = embedder
 
     async def answer(self, request: AnswerRequest, actor: Actor) -> AnswerResult:
+        """Answer one question. Traced as a whole so stage costs are attributable."""
+        with tracer.trace("answer", surface="public" if actor.is_public else "agent"):
+            result = await self._answer(request, actor)
+            tracer.set(
+                outcome=getattr(result.outcome, "value", str(result.outcome)),
+                citations=len(result.citations),
+                confidence=str(result.confidence) if result.confidence else None,
+            )
+            return result
+
+    async def _answer(self, request: AnswerRequest, actor: Actor) -> AnswerResult:
         deadline = Deadline.start(
             self._settings.answer_deadline_public_ms
             if actor.is_public
@@ -166,11 +178,49 @@ class AnswerService:
         #    retirement takes effect on the next query with no cache or index sweep.
         try:
             vectors = await self._embedder.embed([request.query])
-            candidates = self._retrieval.hybrid_search(
-                vectors[0], request.query, self._settings.retrieval_candidate_count
-            )
+            with tracer.span("retrieve"):
+                candidates = self._retrieval.hybrid_search(
+                    vectors[0], request.query, self._settings.retrieval_candidate_count
+                )
         except CircuitOpen as exc:
             raise ModelUnavailable("embedding unavailable") from exc
+
+        # Withhold pairings that people have independently reported as not answering
+        # this question. This is the weakest action a rating can take: the record stays
+        # approved and answerable everywhere else, because being wrong for one question
+        # is not being wrong. Only a curator can retire a record.
+        feedback = getattr(self, "_feedback", None)
+        if feedback is not None and candidates:
+            withheld = feedback.suppressed_for(request.query)
+            if withheld:
+                kept = [c for c in candidates if str(c.item_id) not in withheld]
+                log.info("answer.suppressed_by_feedback",
+                         removed=len(candidates) - len(kept))
+                candidates = kept
+
+        # 4c. Nothing retrieved. For a question asked in a language the corpus is not
+        #     written in this is the normal case, not an edge case: the index holds
+        #     English and Hindi vocabulary, so a Bengali question shares no term with
+        #     any record and retrieval returns an empty set every time. Measuring the
+        #     acceptance sets showed exactly that — Bengali, Tamil and Telugu answered
+        #     one question in five, and the four failures were empty retrievals rather
+        #     than wrong answers.
+        #
+        #     The rewrite already built for badly-phrased English questions is the same
+        #     tool: restate the question in the corpus's vocabulary and retrieve on
+        #     that. It stays a retrieval key only, so the answer is still generated in
+        #     the user's language from the passage that was found.
+        rewriter = getattr(self, "_rewriter", None)
+        if not candidates and rewriter is not None and rewriter.should_rewrite() \
+                and deadline.allows(2000):
+            bridged = await rewriter.rewrite(request.query)
+            if bridged:
+                candidates = self._retrieval.hybrid_search(
+                    vectors[0], bridged, self._settings.retrieval_candidate_count
+                )
+                if candidates:
+                    log.info("answer.cross_language_retrieval",
+                             language=language, terms=bridged)
 
         if not candidates:
             return self._no_answer(request, language, [], "no_match", deadline, actor)
@@ -179,9 +229,10 @@ class AnswerService:
         #    an unranked candidate set — a badly-ranked answer is worse than none.
         confidence_ceiling: float | None = None
         try:
-            scores = await self._reranker.rerank(
-                request.query, [c.body for c in candidates]
-            )
+            with tracer.span("relevance_judge"):
+                scores = await self._reranker.rerank(
+                    request.query, [c.body for c in candidates]
+                )
             candidates = sorted(
                 [
                     ScoredChunk(**{**c.__dict__, "rerank_score": s})
@@ -216,7 +267,6 @@ class AnswerService:
         #     is never shown, so it cannot introduce a claim, and the judge still
         #     scores the second pass against the user's own words — the rewrite gets
         #     no say in whether its own results are good.
-        rewriter = getattr(self, "_rewriter", None)
         judged_best = top[0].score if top else 0.0
         if (
             rewriter is not None
@@ -261,7 +311,8 @@ class AnswerService:
 
         # 6. Conflict detection BEFORE the bar (BR-6). A conflict is shown regardless of
         #    confidence and is never counted as an answer.
-        conflict = self._conflicts.detect(top)
+        with tracer.span("conflict_detection", candidates=len(top)):
+            conflict = self._conflicts.detect(top)
         if conflict is not None:
             return self._conflict_result(request, language, conflict, deadline, actor)
 
@@ -280,7 +331,15 @@ class AnswerService:
             )
             for c in top
         ]
-        draft = await self._generate(context, request.query, language, deadline)
+        # Generation runs in the passages' language, not the reader's. Grounding
+        # verification compares a sentence against the passage that produced it, so a
+        # draft written in a different language than the passage fails verification
+        # however faithful it is — measured at 0.0 script fidelity for Bengali, where
+        # every draft was suppressed and the English passage quoted instead.
+        # Translation happens after verification, never before, so nothing unverified
+        # is ever translated.
+        passage_language = top[0].item_language or "eng"
+        draft = await self._generate(context, request.query, passage_language, deadline)
         report = self._verifier.verify(draft, {c.chunk_id: c.body for c in top})
 
         # 9. Suppression, not warning. An ungrounded draft is discarded and the
@@ -303,6 +362,17 @@ class AnswerService:
                 return self._no_answer(
                     request, language, top[:3], "grounding_failed", deadline, actor
                 )
+
+        # Translate what passed, and only what passed. The citation is untouched: it
+        # appears in its source language, because a translated quotation is not
+        # evidence. The reader is told the answer was translated.
+        translated = False
+        translator = getattr(self, "_translator", None)
+        if (translator is not None and language != passage_language
+                and final_text.strip() and deadline.allows(1200)):
+            with tracer.span("translate", target=language):
+                final_text, translated = await translator.translate(
+                    final_text, language, passage_language)
 
         citations = [_to_citation(c, rank=i + 1) for i, c in enumerate(cited)]
 

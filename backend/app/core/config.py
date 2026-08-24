@@ -58,6 +58,20 @@ class Settings(BaseSettings):
     """API Setu credentials for Udyam and GSTIN verification. Absent, a well-formed
     number reports as 'unavailable' — never as verified, and never as invalid."""
 
+    # --- WhatsApp (Meta Cloud API) ---------------------------------------------------
+    whatsapp_token: str = ""
+    whatsapp_phone_number_id: str = ""
+    whatsapp_verify_token: str = ""
+    whatsapp_app_secret: str = ""
+    """Without app_secret every inbound webhook is rejected as unverifiable, which is
+    the safe default: an unsigned webhook is the one an attacker sends."""
+
+    # --- Departmental feeds ----------------------------------------------------------
+    dgft_feed_url: str = ""
+    cbic_feed_url: str = ""
+    """Real feed endpoints, supplied by the operator. Left empty rather than guessed:
+    a fabricated URL produces a connector that silently fetches nothing."""
+
     object_store_endpoint: str = "http://localhost:9000"
     object_store_bucket: str = "scc-documents"
 
