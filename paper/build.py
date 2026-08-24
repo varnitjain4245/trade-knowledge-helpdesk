@@ -150,11 +150,17 @@ body {
   margin: 0 0 14pt; column-span: all; font-family: 'Times New Roman', serif;
 }
 .authors {
-  column-span: all; text-align: center; font-size: 10pt; margin: 0 0 18pt;
-  line-height: 1.35;
+  column-span: all; text-align: center; font-size: 10pt; margin: 0 0 16pt;
+  line-height: 1.3;
 }
-.authors .name { font-size: 11pt; }
+/* IEEE sets author blocks in a centred grid; five authors take three then two, as
+   the reference paper does, so the second row is centred under the first. */
+.arow { display: flex; justify-content: center; gap: 10mm; margin-bottom: 8pt; }
+.arow-2 { gap: 16mm; }
+.authors .author { min-width: 42mm; }
+.authors .name { font-size: 11pt; margin-bottom: 1pt; }
 .authors .aff { font-style: italic; }
+.authors .mail { word-break: break-all; }
 .body { column-count: 2; column-gap: 6mm; }
 h2.sec {
   font-size: 10pt; font-weight: 400; text-align: center; text-transform: none;
@@ -212,10 +218,44 @@ def main() -> None:
 
     authors = """
 <div class="authors">
-  <div class="name">First Author, Second Author, Third Author, Fourth Author, Fifth Author</div>
-  <div class="aff">Department of Computer Science</div>
-  <div>[Institution], [City], India</div>
-  <div>{first.author, second.author, third.author}@[institution].edu</div>
+<div class="arow arow-3">
+  <div class="author">
+    <div class="name">Varnit Jain</div>
+    <div class="aff">Computer Science</div>
+    <div class="aff">KIET Group of Institutions</div>
+    <div>Ghaziabad, Delhi-NCR</div>
+    <div class="mail">varnit.2327cs1237@kiet.edu</div>
+  </div>
+  <div class="author">
+    <div class="name">Tanu</div>
+    <div class="aff">Computer Science</div>
+    <div class="aff">KIET Group of Institutions</div>
+    <div>Ghaziabad, Delhi-NCR</div>
+    <div class="mail">tanu.2327cs1027@kiet.edu</div>
+  </div>
+  <div class="author">
+    <div class="name">Yash Yadav</div>
+    <div class="aff">Computer Science</div>
+    <div class="aff">KIET Group of Institutions</div>
+    <div>Ghaziabad, Delhi-NCR</div>
+    <div class="mail">yash.2327csit1035@kiet.edu</div>
+  </div>
+</div>
+<div class="arow arow-2">
+  <div class="author">
+    <div class="name">Swarna Chaudhary</div>
+    <div class="aff">Computer Science</div>
+    <div class="aff">KIET Group of Institutions</div>
+    <div>Ghaziabad, Delhi-NCR</div>
+    <div class="mail">Swarna.2327cs1026@kiet.edu</div>
+  </div>
+  <div class="author">
+    <div class="name">Prof. Sunil</div>
+    <div class="aff">Computer Science</div>
+    <div class="aff">KIET Group of Institutions</div>
+    <div>Ghaziabad, Delhi-NCR</div>
+  </div>
+</div>
 </div>"""
 
     page = f"""<!doctype html>
