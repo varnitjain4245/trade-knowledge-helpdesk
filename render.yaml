@@ -1,0 +1,36 @@
+# Deployment blueprint for the actual application — the FastAPI service with all eleven
+# surfaces, not a reduced version of it.
+#
+# SQLite lives on a persistent disk rather than the container filesystem: without one,
+# every deploy and every restart would silently wipe the accounts and question history,
+# which is precisely the failure moving off in-memory storage was meant to end.
+
+services:
+  - type: web
+    name: trade-knowledge-helpdesk
+    runtime: python
+    plan: free
+    region: singapore              # nearest region to the audience this serves
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.demo.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/demo/state
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      # Accounts and history are written here. Without the disk mount below this path is
+      # ephemeral and the database disappears on every restart.
+      - key: SCC_DATABASE_PATH
+        value: /var/data/scc.db
+      - key: SCC_GENERATION_PROVIDER
+        value: groq
+      - key: SCC_ALLOWED_ORIGINS
+        value: '["https://trade-knowledge-helpdesk.onrender.com"]'
+      # Set in the dashboard, never committed. The build will run without it and the
+      # desk falls back to quoting records verbatim rather than failing.
+      - key: SCC_GROQ_API_KEY
+        sync: false
+    disk:
+      name: scc-data
+      mountPath: /var/data
+      sizeGB: 1
