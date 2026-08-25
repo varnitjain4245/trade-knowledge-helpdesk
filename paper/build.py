@@ -7,6 +7,8 @@ caps, table captions above and figure captions below.
 
 import html
 import re
+
+from charts import CHARTS
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -94,6 +96,24 @@ def convert(md: str) -> str:
 
         # Fenced block -> figure art; the "**Caption.** Fig. N." line that follows
         # becomes the caption, which IEEE sets below the figure.
+        # A chart marker: <!--CHART:name--> is replaced by inline SVG from charts.py,
+        # and the line that follows becomes its caption.
+        if line.startswith("<!--CHART:"):
+            flush()
+            name = line[len("<!--CHART:"):].split("-->")[0].strip()
+            i += 1
+            while i < len(lines) and not lines[i].strip():
+                i += 1
+            cap = ""
+            if i < len(lines) and lines[i].startswith("Fig."):
+                cap_lines = []
+                while i < len(lines) and lines[i].strip():
+                    cap_lines.append(lines[i].strip()); i += 1
+                cap = inline(" ".join(cap_lines))
+            out.append(f'<figure class="ieee chart">{CHARTS[name]()}'
+                       f'<figcaption>{cap}</figcaption></figure>')
+            continue
+
         if line.startswith("```"):
             flush()
             i += 1
@@ -198,6 +218,7 @@ pre.fig {
   font-size: 5.4pt; line-height: 1.05; margin: 0 0 4pt; display: inline-block;
   text-align: left; white-space: pre;
 }
+figure.ieee.chart svg { max-width: 100%; height: auto; }
 figure.ieee figcaption {
   font-size: 8pt; text-align: justify; margin: 0 auto; max-width: 100%;
 }

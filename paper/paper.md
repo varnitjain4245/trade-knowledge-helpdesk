@@ -262,17 +262,15 @@ With lexical confidence alone, three out-of-domain questions were answered from 
 
 Enforcing the gate refused every non-English language, including one offered from the outset with no recorded score. Measurement showed the refusal was correct.
 
-TABLE II. PER-LANGUAGE ACCEPTANCE, BEFORE AND AFTER THE TWO REPAIRS
+<!--CHART:languages-->
 
-| Language | Answered | Cited | Script | Answered | Cited | Script | Offered |
-|---|---|---|---|---|---|---|---|
-| Hindi | 3/5 | 1.00 | 0.20 | 5/5 | 1.00 | 1.00 | yes |
-| Bengali | 1/5 | 1.00 | 0.00 | 5/5 | 1.00 | 0.80 | yes |
-| Tamil | 1/5 | 1.00 | 0.00 | 5/5 | 1.00 | 1.00 | yes |
-| Telugu | 1/5 | 1.00 | 0.00 | 4/5 | 1.00 | 1.00 | yes |
-| Marathi | 2/5 | 1.00 | 0.00 | 4/5 | 1.00 | 0.75 | **no** |
+Fig. 4. Per-language acceptance, before and after the two repairs. Answer rate and script fidelity failed for different reasons and were repaired by different changes; the dashed line is the script-fidelity floor, which Marathi does not clear.
 
-Columns 2–4 are before, 5–7 after. Thresholds: answer rate 0.70, citation integrity 1.00, script fidelity 0.80.
+<!--CHART:heatmap-->
+
+Fig. 5. The three gate measures across both panels. Citation integrity is uniformly 1.00 in each: the structural guarantee held while the tuned behaviour around it was wrong.
+
+Thresholds: answer rate 0.70, citation integrity 1.00, script fidelity 0.80.
 
 Two distinct defects account for the two halves. Low answer rates were empty retrievals, repaired by the cross-language bridge of Section IV.F. Zero script fidelity was grounding verification correctly rejecting drafts written in a language the passage was not, repaired by the verify-then-translate ordering. Citation integrity was 1.00 throughout: the guarantee held while the surrounding behaviour was wrong, which is the intended relationship between a structural invariant and a tuning failure. Marathi remains withheld at 0.75, since a threshold lowered when a language fails it is not a threshold.
 
@@ -280,16 +278,9 @@ Two distinct defects account for the two halves. Low answer rates were empty ret
 
 Scoring in the style of a reference-free retrieval-augmented evaluation framework [11], with two measures that framework does not define but this system promises.
 
-TABLE III. REFERENCE-FREE SCORES
+<!--CHART:scores-->
 
-| Measure | Value |
-|---|---|
-| Faithfulness | 1.00 |
-| Citation integrity | 1.00 |
-| Refusal accuracy | 1.00 |
-| Answer rate (in-domain) | 1.00 |
-| Answer relevancy | 0.83 |
-| Context precision | 0.83 |
+Fig. 6. Reference-free scores. Solid bars are quantities the design guarantees structurally; hatched bars are measured but not guaranteed.
 
 Faithfulness at 1.00 is the number the grounding verifier exists to hold: no answer asserted a claim its citation did not support. Relevancy and precision below 1.00 without a fall in faithfulness is the expected signature — retrieval returning passages that were not needed, and answers occasionally addressing a neighbouring question, while never stating anything unsupported. The judge is the model that also serves the pipeline [7], so faithfulness should be read as an upper bound; benchmarks for citation quality [15] provide a stronger external standard.
 
