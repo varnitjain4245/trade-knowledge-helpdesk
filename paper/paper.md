@@ -126,41 +126,7 @@ A low lexical score never fired: scores for such questions were 0.58–0.69, the
 
 Triggering below the answer bar also never fired, revealing a defect rather than a mistuning: the judge's scale defines 0.7 as *answers partially* and the bar was also 0.7, so partial matches landed exactly on it and passed. "My goods are stuck at the port" was being answered from a pre-shipment inspection record at precisely 0.7.
 
-The surviving trigger is *partial-or-worse*, evaluated after judging, so the retry fires only where the request was heading for a refusal or a partial answer (Fig. 2). The rewrite is a **retrieval key only** — never reaching the generator, never displayed, so it cannot introduce a claim — and the second pass is judged against the user's original words.
-
-```
-        question
-           │
-           ▼
-      retrieval ──── nothing found ─────┐
-           │ candidates                 │
-           ▼                            │
-   relevance judging                    │
-           │                            │
-      best score?                       │
-      ┌────┴─────┐                      │
-    >0.7       ≤0.7 ────────────────────┤
-      │                                 │
-      ▼                                 ▼
-  answer path            rewrite into corpus terms
-                                        │
-                                        ▼
-                          retrieve + judge, scored
-                          against the ORIGINAL words
-                                        │
-                              better or equal?
-                                 ┌──────┴──────┐
-                                yes            no
-                                 │              │
-                                 ▼              ▼
-                            answer path   keep first pass
-
-  falsified triggers:
-    low lexical score  never fired (wrong records score 0.58-0.69)
-    below the bar      never fired (partial sits exactly ON the bar)
-```
-
-Fig. 2. Where the retrieval retry belongs. The trigger is evaluated after relevance judging, because a lexical score does not distinguish a confident match from a confidently wrong one. The same path bridges a question asked in a language the corpus is not written in.
+The surviving trigger is *partial-or-worse*, evaluated after judging, so the retry fires only where the request was heading for a refusal or a partial answer. The rewrite is a **retrieval key only** — never reaching the generator, never displayed, so it cannot introduce a claim — and the second pass is judged against the user's original words.
 
 ### F. Cross-Language Retrieval and the Ordering of Translation
 
@@ -168,7 +134,7 @@ The same mechanism resolves a separate failure. The index holds English and Hind
 
 A deeper conflict then appears between two properties the system already had. Grounding verification checks each generated sentence against the passage that produced it; a Bengali sentence, however faithful, shares no tokens with the English passage it came from. Verification fails, the draft is correctly suppressed, and the extractive fallback quotes English. Measured on the acceptance sets this produced a system answering Bengali questions in English at 0.00 script fidelity.
 
-Three resolutions exist and one is admissible. Weakening verification for non-English trades the central guarantee for a cosmetic one, for the users least able to check a result. Verifying in the answer language means comparing a claim against a machine translation of the evidence, at which point the evidence is no longer the record. The third — **verify first, then translate** — generates in the passage language, verifies unchanged, and translates only what passed (Fig. 3). Translation therefore operates on text already proved to follow from the record: a mistranslation can garble an answer but cannot manufacture a claim. The citation is never translated, and the answer is labelled as translated.
+Three resolutions exist and one is admissible. Weakening verification for non-English trades the central guarantee for a cosmetic one, for the users least able to check a result. Verifying in the answer language means comparing a claim against a machine translation of the evidence, at which point the evidence is no longer the record. The third — **verify first, then translate** — generates in the passage language, verifies unchanged, and translates only what passed (Fig. 2). Translation therefore operates on text already proved to follow from the record: a mistranslation can garble an answer but cannot manufacture a claim. The citation is never translated, and the answer is labelled as translated.
 
 ```
   WRONG — translate, then verify
@@ -205,7 +171,7 @@ Three resolutions exist and one is admissible. Weakening verification for non-En
         └─▶ citation passage untouched, shown in English
 ```
 
-Fig. 3. Verify-then-translate. Translation operates only on text already proved to follow from the record, so a mistranslation can garble an answer but cannot manufacture a claim. The cited passage is never translated, because a translated quotation is not evidence.
+Fig. 2. Verify-then-translate. Translation operates only on text already proved to follow from the record, so a mistranslation can garble an answer but cannot manufacture a claim. The cited passage is never translated, because a translated quotation is not evidence.
 
 ### G. The Language Acceptance Gate
 
@@ -247,12 +213,13 @@ The corpus comprises 51 records and 107 passages spanning registration, customs 
 
 ### B. Answer Rate, Refusal, and the Confidence Source
 
-TABLE I. OUTCOMES, AND THE EFFECT OF THE CONFIDENCE SOURCE
+<!--CHART:outcomes-->
 
-| Confidence source | In-domain answered with citation | Contradiction surfaced | Out-of-domain incorrectly answered |
-|---|---|---|---|
-| Lexical (BM25 + coverage) | 27/30 | 1/1 | 3/6 |
-| Relevance judging | 30/30 | 1/1 | 0/6 |
+Fig. 3. Correct outcomes by question class. Every bar reaches its class size: each in-domain question was answered with a citation, the contradictory pair was surfaced as a contradiction, and every out-of-domain question was refused.
+
+<!--CHART:ablation-->
+
+Fig. 4. What changes when confidence is derived by relevance judging rather than from lexical overlap. The in-domain gain is modest; the elimination of confidently wrong out-of-domain answers is not.
 
 Every in-domain question was answered with at least one citation naming an issuing authority and issue date; every out-of-domain question was refused; the deliberately contradictory pair was surfaced rather than resolved.
 
@@ -264,11 +231,11 @@ Enforcing the gate refused every non-English language, including one offered fro
 
 <!--CHART:languages-->
 
-Fig. 4. Per-language acceptance, before and after the two repairs. Answer rate and script fidelity failed for different reasons and were repaired by different changes; the dashed line is the script-fidelity floor, which Marathi does not clear.
+Fig. 5. Per-language acceptance, before and after the two repairs. Answer rate and script fidelity failed for different reasons and were repaired by different changes; the dashed line is the script-fidelity floor, which Marathi does not clear.
 
 <!--CHART:heatmap-->
 
-Fig. 5. The three gate measures across both panels. Citation integrity is uniformly 1.00 in each: the structural guarantee held while the tuned behaviour around it was wrong.
+Fig. 6. The three gate measures across both panels. Citation integrity is uniformly 1.00 in each: the structural guarantee held while the tuned behaviour around it was wrong.
 
 Thresholds: answer rate 0.70, citation integrity 1.00, script fidelity 0.80.
 
@@ -280,7 +247,7 @@ Scoring in the style of a reference-free retrieval-augmented evaluation framewor
 
 <!--CHART:scores-->
 
-Fig. 6. Reference-free scores. Solid bars are quantities the design guarantees structurally; hatched bars are measured but not guaranteed.
+Fig. 7. Reference-free scores. Amber bars are quantities the design guarantees structurally; blue bars are measured but not guaranteed.
 
 Faithfulness at 1.00 is the number the grounding verifier exists to hold: no answer asserted a claim its citation did not support. Relevancy and precision below 1.00 without a fall in faithfulness is the expected signature — retrieval returning passages that were not needed, and answers occasionally addressing a neighbouring question, while never stating anything unsupported. The judge is the model that also serves the pipeline [7], so faithfulness should be read as an upper bound; benchmarks for citation quality [15] provide a stronger external standard.
 
@@ -304,7 +271,11 @@ The last three share a shape worth naming: each is a **claim without a mechanism
 
 ### G. Latency
 
-Per-stage budgets sum to 4 350 ms against a 5 000 ms target, the largest being generation at 2 500 ms and relevance judging at 400 ms. Per-stage timeouts alone proved insufficient: several stages running slowly without individually timing out can breach the target together. A whole-request deadline was added, clamping each stage to the remaining budget and declining to begin generation it cannot finish. Every degradation resolves toward showing less rather than showing something unverified — retrieval timing out reports assist unavailable, judging timing out caps confidence below the bar, generation timing out falls back to extraction, and grounding timing out suppresses the draft.
+Per-stage budgets sum to 4 300 ms against a 5 000 ms whole-request target, the largest being generation at 2 500 ms and relevance judging at 400 ms (Fig. 8). Per-stage timeouts are a different quantity from budgets, and alone they proved insufficient: they sum to 10 600 ms, more than twice the target, so a chain of slow-but-not-timing-out stages breaches it with nothing to stop them. A whole-request deadline was added, clamping each stage to the remaining budget and declining to begin generation it cannot finish. Every degradation resolves toward showing less rather than showing something unverified — retrieval timing out reports assist unavailable, judging timing out caps confidence below the bar, generation timing out falls back to extraction, and grounding timing out suppresses the draft.
+
+<!--CHART:latency-->
+
+Fig. 8. The per-stage budget. Model-bound stages, in amber, hold most of it. Per-stage timeouts sum to more than twice the whole-request deadline, which is why the deadline exists.
 
 ### H. Limitations
 
