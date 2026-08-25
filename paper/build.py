@@ -138,11 +138,11 @@ def convert(md: str) -> str:
 
 
 CSS = """
-@page { size: A4; margin: 19mm 16mm 25mm 16mm; }
+@page { size: A4; margin: 17mm 15mm 17mm 15mm; }
 * { box-sizing: border-box; }
 body {
   font-family: 'Times New Roman', Times, serif;
-  font-size: 10pt; line-height: 1.16; margin: 0; color: #000;
+  font-size: 10pt; line-height: 1.09; margin: 0; color: #000;
   text-align: justify; hyphens: auto;
 }
 .title {
@@ -164,7 +164,7 @@ body {
 .body { column-count: 2; column-gap: 6mm; }
 h2.sec {
   font-size: 10pt; font-weight: 400; text-align: center; text-transform: none;
-  margin: 12pt 0 4pt; break-after: avoid;
+  margin: 7pt 0 2pt; break-after: avoid;
 }
 h2.sec .sc { font-variant: small-caps; }
 h3.sub {
@@ -176,26 +176,26 @@ p + p { margin-top: 0; }
 p.abstract { font-weight: bold; font-style: italic; text-indent: 0; margin-bottom: 8pt; }
 p.lead { text-indent: 12pt; }
 p.ref {
-  font-size: 8pt; text-indent: -10pt; padding-left: 10pt; margin-bottom: 2pt;
+  font-size: 7.3pt; text-indent: -9pt; padding-left: 9pt; margin-bottom: 1pt;
   text-align: left;
 }
 h2.refs-head { text-align: center; }
 table.ieee {
-  width: 100%; border-collapse: collapse; font-size: 8pt; margin: 4pt 0 10pt;
+  width: 100%; border-collapse: collapse; font-size: 7.4pt; margin: 3pt 0 7pt;
   break-inside: avoid; text-align: center;
 }
 table.ieee th {
   border-top: 1px solid #000; border-bottom: 1px solid #000;
-  padding: 3pt 4pt; font-weight: 400; font-style: italic;
+  padding: 2pt 3pt; font-weight: 400; font-style: italic;
 }
-table.ieee td { padding: 2.5pt 4pt; border-bottom: 0.4pt solid #999; }
+table.ieee td { padding: 1.8pt 3pt; border-bottom: 0.4pt solid #999; }
 table.ieee tr:last-child td { border-bottom: 1px solid #000; }
 figure.ieee {
-  column-span: all; margin: 8pt 0 10pt; text-align: center; break-inside: avoid;
+  margin: 5pt 0 6pt; text-align: center; break-inside: avoid;
 }
 pre.fig {
   font-family: 'Menlo', 'DejaVu Sans Mono', 'Courier New', monospace;
-  font-size: 6pt; line-height: 1.05; margin: 0 0 4pt; display: inline-block;
+  font-size: 5.4pt; line-height: 1.05; margin: 0 0 4pt; display: inline-block;
   text-align: left; white-space: pre;
 }
 figure.ieee figcaption {

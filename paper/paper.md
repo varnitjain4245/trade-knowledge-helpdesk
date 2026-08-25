@@ -6,61 +6,35 @@ KIET Group of Institutions, Ghaziabad, Delhi-NCR, India
 
 ---
 
-**Abstract** — Contact centres serving government trade and commerce administration answer questions whose consequences are material: a licence not obtained holds a consignment at port, and a duty rate quoted wrongly becomes a penalty. Existing retrieval-augmented question answering systems optimise for producing an answer, and treat provenance as a display feature appended after generation. This paper proposes a knowledge platform for such contact centres in which provenance is a structural precondition rather than a presentation choice. Four mechanisms distinguish the design: an answer that cannot be attributed to an approved record is unrepresentable in the system's type system rather than merely discouraged; contradiction between records is detected *before* the confidence threshold is applied, so a disagreement is surfaced as a disagreement rather than silently resolved in favour of the higher-scoring source; a generated draft is verified against the passages that produced it and **suppressed** rather than flagged when unsupported; and refusal is a first-class outcome returned with a success status, so that "no reliable answer" is never presented in the visual or protocol language of failure. The system additionally treats retirement of superseded guidance as immediate through a generation counter that invalidates cached answers atomically, gates a public surface behind a declared coverage floor, and supports six Indian languages with per-language enablement contingent on measured correctness. An implementation over a 51-record trade corpus answered 30 of 30 realistic practitioner questions with citations while correctly refusing all out-of-domain questions. We report the defects that measurement exposed, several of which were invisible to component-level testing.
+**Abstract** — Contact centres serving government trade administration answer questions whose consequences are material: a licence not obtained holds a consignment at port, and a duty rate quoted wrongly becomes a penalty. Existing retrieval-augmented question answering systems optimise for producing an answer and treat provenance as a display feature appended after generation. This paper proposes a platform in which provenance is a structural precondition. An answer that cannot be attributed to an approved record is unrepresentable in the type system; contradiction between records is detected *before* the confidence threshold, so disagreement is surfaced rather than silently resolved in favour of the higher-scoring source; an unsupported draft is **suppressed** rather than flagged; and refusal is a first-class outcome returned with a success status. We further report a conflict these mechanisms make unavoidable — a sentence in one language cannot be lexically verified against a passage in another — and resolve it by ordering rather than by weakening either property: generation and verification occur in the passage language, only verified text is translated, and the cited passage is never translated at all. This raised script fidelity from 0.00 to between 0.80 and 1.00 across four languages while citation integrity remained 1.00 throughout; a fifth language that fails its threshold is reported and withheld. An implementation over a 51-record trade corpus answered 30 of 30 practitioner questions with citations, refused all out-of-domain questions, and scored 1.00 faithfulness under reference-free evaluation. We report the defects measurement exposed, including a class we name *claims without mechanisms*: properties the system asserted that no code enforced and no test could fail.
 
-*Index Terms* — Retrieval-augmented generation, grounded question answering, provenance, government contact centre, multilingual information access, knowledge governance, trade facilitation
+*Index Terms* — Retrieval-augmented generation, grounded question answering, provenance, cross-language information retrieval, government contact centre, multilingual information access, knowledge governance, trade facilitation
 
 ---
 
 ## I. INTRODUCTION
 
-Public helpdesks, customer service platforms and enterprise search systems have converged on a common architecture for question answering over a private corpus: retrieve candidate passages, condition a language model on them, and return generated prose [1], [2]. The pattern reduces unsupported assertion relative to unconditioned generation, whose failure modes are documented at length [3], and its adoption across administrative software has been rapid.
+Public helpdesks and enterprise search systems have converged on a common architecture for question answering over a private corpus: retrieve candidate passages, condition a language model on them, return generated prose [1], [2]. The pattern reduces unsupported assertion relative to unconditioned generation, whose failure modes are documented at length [3], and its adoption across administrative software has been rapid.
 
-The pattern is nonetheless insufficient for a class of application in which the *basis* of an answer matters as much as its content. A contact centre serving India's commerce and industry administration is one such case. Its users are exporters, importers, micro and small enterprises and customs intermediaries; its subject matter is licensing, tariff classification, goods and services tax, incentive schemes and e-commerce obligation. The material is issued continuously by multiple authorities as circulars, notifications and public notices, amended frequently, and published as documents rather than as answers.
+The pattern is insufficient where the *basis* of an answer matters as much as its content. A contact centre serving India's commerce and industry administration is such a case. Its users are exporters, importers, micro and small enterprises and customs intermediaries; its subject matter is licensing, tariff classification, goods and services tax, incentive schemes and e-commerce obligation. The material is issued continuously by multiple authorities as circulars, notifications and public notices, amended frequently, and published as documents rather than as answers.
 
-Four properties of this setting are not addressed by conventional retrieval-augmented question answering.
+Four properties of this setting are not addressed by conventional retrieval-augmented question answering. **Consequence asymmetry:** a wrong answer is not a poor user experience but a held consignment, a forfeited incentive or a penalty, so the cost of a confident error greatly exceeds that of an admitted gap, and systems tuned to maximise answer rate optimise the wrong quantity. **Amendment:** guidance expires by supersession rather than by age, and a system that continues citing a reversed notice is worse than one that admits ignorance. **Contradiction:** two authorities can disagree, and presenting the higher-ranked one as the answer conceals a decision the system is not competent to make. **Language:** a substantial fraction of users is more fluent in a language other than English, and a system answering only in English, or answering in an Indian language without being measured in it, serves a subset of its users while appearing to serve all.
 
-**Consequence asymmetry.** A wrong answer is not a poor user experience; it is a held consignment, a forfeited incentive, or a penalty. The cost of a confident error greatly exceeds the cost of an admitted gap. Systems tuned to maximise answer rate optimise the wrong quantity.
-
-**Amendment.** Guidance in this domain expires by supersession rather than by age. When a public notice reverses the licensing status of a commodity, every prior answer becomes wrong at a specific instant. A system that caches answers, or that embeds knowledge in model weights, cannot retire guidance at that instant.
-
-**Contradiction.** Multiple authorities issue overlapping material, and a corpus of any size contains records that disagree. Presenting the higher-ranked one as the answer conceals a decision the system is not competent to make.
-
-**Language.** A substantial fraction of the user population is more fluent in a language other than English, and often more fluent speaking than reading. A system that answers only in English, or that answers in an Indian language without being measured in it, serves a subset of its users while appearing to serve all of them.
-
-This paper proposes a system in which these four properties are architectural commitments rather than features. Section II reviews related work. Section III describes the proposed system and its governing rules. Section IV describes the answering pipeline in detail. Section V reports measured results, including defects that measurement exposed. Section VI discusses outcomes and impact, and Section VII concludes.
+This paper proposes a system in which these properties are architectural commitments rather than features. Section II reviews related work; Section III the governing rules and architecture; Section IV the answering pipeline; Section V measured results, including the defects measurement exposed; Section VI outcomes; Section VII concludes.
 
 ---
 
 ## II. RELATED WORK
 
-### A. Retrieval-Augmented Generation
+Conditioning a generator on retrieved passages gives a model access to knowledge it was not trained on [1] and is now standard for question answering over a private corpus [2]. Retrieval reduces unsupported assertion [3] without eliminating it, because nothing in the architecture requires a generated sentence to follow from the passages supplied.
 
-Conditioning a generator on passages retrieved from a corpus was introduced to give a model non-parametric access to knowledge it was not trained on [1], and has since become the standard architecture for question answering over a private document collection [2]. The motivation is well established: unconditioned generation asserts fluent but unsupported statements at a rate that surveys of the phenomenon document across tasks and domains [3]. Retrieval reduces that rate but does not eliminate it, because nothing in the architecture requires a generated sentence to follow from the passages placed in the prompt.
+The gap between citing a source and being supported by it is formalised as attribution, with a definition and annotation protocol for deciding whether a statement is entailed by the source ascribed to it [4]; automated frameworks score a related notion of faithfulness per response [11], and benchmarks exist for citation quality in generated text [15]. In each case the signal is a *measurement*, computed after generation and reported alongside the answer. This system differs in what the signal is used for: a draft failing verification is discarded rather than annotated. Verification is a gate, not a metric.
 
-### B. Attribution and Its Enforcement
+Retrieval here combines probabilistic lexical ranking [5] with judging by a language model, whose agreement with human assessment and characteristic biases are documented [7] and which supersedes the fine-tuned cross-encoder originally used for the purpose [6]. Rewriting a query before retrieval helps retrieval-augmented systems generally [14] and is standard for retrieving documents written in another language, where the translation exists to find documents rather than to be read [13]. Declining to answer below a calibrated confidence is studied as selective prediction [8], which does not address how an abstention should be *delivered* — treated here as a correctness concern. Where passages disagree, models are receptive to coherent external evidence yet show confirmation bias when part of the context agrees with parametric knowledge [9], so generating from the highest-scoring passage resolves disagreements silently.
 
-The gap between citing a source and being supported by it has been formalised as attribution, with an interpretable definition and human annotation protocol for deciding whether a generated statement is entailed by the source ascribed to it [4]. Automated evaluation frameworks for retrieval-augmented pipelines operationalise a related notion of faithfulness as a per-response score [11]. In both lines of work the attribution signal is a measurement: it is computed after generation and reported alongside the answer. The present system differs in the use to which the signal is put. A draft that fails verification is not annotated with a low score; it is discarded, and an extractive answer quoting the source record is returned in its place. Verification is a gate rather than a metric.
+Multilingual representations for the major Indian languages exist [10], but availability of a model is not evidence that a pipeline answers correctly in a given language. Ratings are informative yet biased, more reliably read as relative evidence than absolute labels [16], and human-in-the-loop arrangements formalise what a system decides automatically and what it defers [17]. Review of e-government chatbots finds deployments largely confined to simple informational responses, with transparency and trust the recurring barriers [12].
 
-### C. Ranking and Relevance Estimation
-
-Lexical ranking under the probabilistic relevance framework remains a strong and inspectable baseline for retrieval over a modest corpus, and BM25 is its standard instantiation [5]. Its known weakness is vocabulary mismatch: a question phrased in the language of a practitioner may share few terms with a record written in the language of a circular. Re-ranking retrieved candidates with a model that reads query and passage jointly addresses this, originally with a fine-tuned cross-encoder [6] and more recently by prompting a general-purpose language model to score relevance directly, a use of models as evaluators whose agreement with human judgement and whose characteristic biases have been studied in detail [7]. The system reported here adopts the latter, and treats the resulting score as the confidence on which answering is conditioned rather than as an ordering key alone.
-
-### D. Abstention
-
-Declining to answer when the evidence is insufficient is studied as selective prediction, where a model answers only above a calibrated confidence threshold and coverage is traded against error on the answered subset [8]. That framing matches the present setting, in which the cost of a confident wrong answer about a duty rate or a licence condition greatly exceeds the cost of an admitted gap. What the selective-prediction literature does not address, and what this paper treats as a design obligation, is how the abstention is delivered: a refusal returned in the vocabulary of failure is read by users as a malfunction, so it is returned here with a success status and rendered as content.
-
-### E. Conflicting Evidence
-
-When retrieved passages disagree, model behaviour is neither neutral nor stable: language models are receptive to coherent external evidence yet exhibit confirmation bias when part of the retrieved context agrees with their parametric knowledge [9]. A pipeline that ranks passages and generates from the highest-scoring one therefore resolves disagreements silently, and the resolution is not a judgement the system is competent to make. Contradiction detection is accordingly placed before the confidence threshold in this design, so that a disagreement is surfaced as a disagreement irrespective of either record's score.
-
-### F. Multilingual and Public-Sector Deployment
-
-Multilingual representations covering the major Indian languages are available [10], but availability of a model is not evidence that a particular pipeline answers correctly in a particular language, which is why enablement here is gated on a measured per-language acceptance score rather than assumed. Review of e-government chatbots reports that deployments have largely been confined to simple informational responses, and identifies transparency and citizen trust as the recurring barriers to broader value [12]. The mechanisms described in this paper — enforced citation, visible disagreement, and refusal as a first-class outcome — are directed at precisely that barrier.
-
-### G. Position of This Work
-
-The contribution is not retrieval-augmented generation, which is established [1], [2], nor attribution measurement, which is defined [4]. It is the enforcement of those ideas as structural properties of a serving system: citation made unrepresentable in its absence, contradiction detection ordered before confidence, grounding failure resolved by suppression rather than annotation, refusal returned as success, and answerability read from a record's lifecycle at query time.
+The contribution is not retrieval-augmented generation [1], [2], nor attribution measurement, which is defined [4] and benchmarked [15]. It is the enforcement of those ideas as structural properties of a serving system — citation unrepresentable in its absence, contradiction ordered before confidence, grounding failure resolved by suppression, refusal returned as success, answerability read from a record's lifecycle at query time — together with the ordering of verification and translation reported in Section IV.F.
 
 ---
 
@@ -90,26 +64,7 @@ A single component is the sole producer of answers. Every surface calls it, whic
 
 Records progress through an explicit lifecycle: processing, pending review, approved, stale, superseded, retired, rejected. Only *approved* and *stale* records are answerable. A stale record — one past its review date — continues to answer while carrying a review-pending indication, on the reasoning that dated guidance accompanied by a warning serves a user better than silence, provided the warning is present.
 
-Supersession takes effect immediately. A monotonic generation counter is incremented within the same database transaction as any lifecycle change, and every cached answer is keyed on that counter. A change therefore renders all prior cache entries unreachable atomically, with no invalidation scan to implement incorrectly. Where the counter cannot be read, the cache is bypassed rather than trusted, so a database outage cannot cause a stale answer to be served against an unverifiable knowledge state. The lifecycle and its transitions are shown in Fig. 2.
-
-```
-   processing ──▶ pending review ──▶ approved ──▶ stale
-        │               │               │  │        │
-        ▼               ▼               │  │        │
-     failed          rejected           │  └────────┴──▶ retired
-        │                               │                   ▲
-        └──▶ (resubmission)             └──▶ superseded ─────┘
-                                                 │
-                                                 └──▶ approved (reversal, reason required)
-
-   answerable set = { approved, stale }
-
-   every transition ──▶ generation counter += 1  (same transaction)
-                    ──▶ audit record             (same transaction)
-                    ──▶ all cached answers unreachable
-```
-
-**Caption.** Fig. 2. Record lifecycle. Only approved and stale records may be cited. A stale record continues to answer with a review-pending indication. Every transition increments a generation counter within the same transaction as the state change and as the audit write, so supersession takes effect on the next answer and no cached answer can outlive the knowledge state that produced it.
+Supersession takes effect immediately. A monotonic generation counter is incremented within the same database transaction as any lifecycle change, and every cached answer is keyed on that counter. A change therefore renders all prior cache entries unreachable atomically, with no invalidation scan to implement incorrectly. Where the counter cannot be read, the cache is bypassed rather than trusted, so a database outage cannot cause a stale answer to be served against an unverifiable knowledge state.
 
 ---
 
@@ -118,110 +73,169 @@ Supersession takes effect immediately. A monotonic generation counter is increme
 Fig. 1 shows the answer pipeline and the position at which each rule of Section III.A takes effect. The ordering is the contribution: contradiction detection precedes the confidence threshold, and grounding verification precedes citation assembly.
 
 ```
-                     ┌──────────────────┐
-                     │  Question        │
-                     └────────┬─────────┘
-                              ▼
-                     ┌──────────────────┐
-                     │ Coverage &       │   public surface only
-                     │ fair-use gate    │
-                     └────────┬─────────┘
-                              ▼
-                     ┌──────────────────┐
-                     │ Language check   │   enabled languages only
-                     └────────┬─────────┘
-                              ▼
-                     ┌──────────────────┐
-                     │ Answer cache     │   keyed on generation counter
-                     └────────┬─────────┘
-                              ▼
-                     ┌──────────────────┐
-                     │ BM25 retrieval   │   answerable records only  ── R5
-                     │ + expansion      │
-                     └────────┬─────────┘
-                              ▼
-                     ┌──────────────────┐
-                     │ Relevance        │   confidence is derived here,
-                     │ judging          │   not from lexical overlap
-                     └────────┬─────────┘
-                              ▼
-                        ╱───────────╲
-                       ╱ Contradict? ╲──── yes ──▶ show both, choose neither
-                       ╲             ╱             ── R2: BEFORE the bar
-                        ╲───────────╱
-                              │ no
-                              ▼
-                        ╱───────────╲
-                       ╱ ≥ answer    ╲──── no ───▶ refuse, offer a person
-                       ╲   bar?      ╱             ── R4: returned as success
-                        ╲───────────╱
-                              │ yes
-                              ▼
-                     ┌──────────────────┐
-                     │ Generation       │
-                     └────────┬─────────┘
-                              ▼
-                        ╱───────────╲
-                       ╱  Grounded?  ╲──── no ───▶ discard draft,
-                       ╲             ╱             quote record verbatim ── R3
-                        ╲───────────╱
-                              │ yes
-                              ▼
-                     ┌──────────────────┐
-                     │ Citations        │   non-empty by construction ── R1
-                     └────────┬─────────┘
-                              ▼
-                     ┌──────────────────┐
-                     │ Persist, then    │   an unrecorded answer is not shown
-                     │ return           │
-                     └──────────────────┘
+              question
+                 │
+                 ▼
+          coverage gate ──▶ language check ──▶ cache
+                                                │
+                                                ▼
+                                    retrieval  (R5)
+                                                │
+                                                ▼
+                                    relevance judging
+                                                │
+                                                ▼
+                            contradiction? ── yes ──▶ show both,
+                                (R2)                 choose neither
+                                                │ no
+                                                ▼
+                            ≥ answer bar? ── no ──▶ refuse,
+                                (R4)                as success
+                                                │ yes
+                                                ▼
+                                         generation
+                                                │
+                                                ▼
+                                 grounded? ── no ──▶ discard draft,
+                                   (R3)              quote record
+                                                │ yes
+                                                ▼
+                        citations non-empty by construction (R1)
+                                                │
+                                                ▼
+                                        persist, return
 ```
 
-**Caption.** Fig. 1. Answer pipeline. Rules R1–R5 are enforced at the marked positions. Contradiction detection precedes confidence thresholding, so a disagreement is reported irrespective of either record's score; grounding failure suppresses the draft rather than annotating it.
+Fig. 1. Answer pipeline. Rules R1–R5 are enforced at the marked positions. Contradiction detection precedes confidence thresholding, so a disagreement is reported irrespective of either record's score; grounding failure suppresses the draft rather than annotating it.
 
-### A. Retrieval
+### A. Retrieval, Judging and Contradiction
 
-Retrieval combines a lexical index with domain-specific query expansion. Passages are indexed under BM25 with the record title weighted into the document representation; a record whose title matches a query but whose body does not would otherwise be unreachable, a defect observed during development and reported in Section V.
+Retrieval combines a lexical index with domain-specific query expansion. Passages are indexed under BM25 [5] with the record title weighted into the document representation, since a record whose title matches a query but whose body does not would otherwise be unreachable. Three query-side transformations proved necessary: suffix stemming with an irregular-form table, acronym expansion mapping the forms practitioners type (IEC, RoDTEP, SCOMET) to expanded terms, and hyphen normalisation so *ecommerce* meets *e-commerce*. Candidate scores are attenuated by the square root of the proportion of query terms a passage addresses, since unattenuated BM25 rewards a single rare term heavily, letting a lookalike record answer on one shared word.
 
-Three transformations proved necessary on the query side. Light suffix stemming with an irregular-form table unifies inflections, without which a question asking whether a buyer is *paying* fails to reach a record stating when a buyer must *pay*. Acronym expansion maps the forms practitioners actually type — IEC, RoDTEP, TReDS, SCOMET — to the expanded terms records use. Hyphenated compounds are normalised so that *ecommerce* meets *e-commerce*.
+Confidence is then derived by a language model judging whether each passage answers the question asked, rather than from lexical overlap [7]. This distinction is the subject of Section V.B: lexical similarity and answerhood are different quantities, and thresholding the first while intending the second is not correctable by tuning.
 
-Candidate scores are attenuated by the square root of the proportion of query terms a passage addresses. Unattenuated BM25 rewards a single rare term heavily, which permits a lookalike record to answer on one shared word.
+Contradiction detection runs *before* the confidence threshold. Two passages are contradictory when they address the same subject, are comparable in kind, and differ in polarity or in a stated value. Detecting this after thresholding would allow the higher-scoring of two disagreeing records to answer alone, presenting a resolution the system is not competent to make.
 
-### B. Relevance Judging
+Every generated draft is verified before display. Each sentence is checked for support within a *single* passage — not the union, since a claim assembled from fragments of several sources is supported by none of them. A failed draft is discarded and the extractive strategy substituted: a designed degradation, and the destination of every failure in the generation path.
 
-BM25 answers which passages share vocabulary with a query. This is a different question from which passage *answers* it, and the gap between the two is the source of a specific failure mode: asked to define one technical term, lexical retrieval returns a record about a different term sharing one word, at maximum confidence. No lexical threshold separates these cases, because the deficiency is in what the score measures rather than in its magnitude.
+### E. Query Rewriting, and Where Its Trigger Belongs
 
-The system therefore derives confidence from a relevance judging stage that scores whether each candidate answers the question asked, discriminating a record about a similar-sounding but different instrument from one that is responsive. Candidates are judged in a single batched call. Where judging is unavailable, confidence is capped below the answer threshold rather than falling back to the lexical score — a lexical score is evidence of shared vocabulary, and admitting it as relevance confidence is what permits an unrelated question to be answered confidently.
+Both retrieval components match surface form, so both fail on questions asking about the right subject in different vocabulary: "faster clearance for a trusted trader" shares no stemmed term with *Authorised Economic Operator*. The remedy — rewriting before retrieval [14] — is established. What the deployment established is *when*, and two triggers were falsified before a third survived.
 
-### C. Contradiction Detection
+A low lexical score never fired: scores for such questions were 0.58–0.69, the index being confident and confidently wrong. A low score does not mark a missed subject, since a wrong record can be lexically strong — the retrieval-side analogue of a model attending to plausible but irrelevant context [18].
 
-Contradiction detection runs on the judged candidate set before thresholding. Two records are treated as contradictory when they exhibit high topical overlap together with a polarity asymmetry — a negation or exemption marker present on one side only — and when their scores are comparable. The comparability requirement matters: without it, a weak tangential passage containing a negation can veto a strong well-supported answer, withholding good information in the name of caution.
+Triggering below the answer bar also never fired, revealing a defect rather than a mistuning: the judge's scale defines 0.7 as *answers partially* and the bar was also 0.7, so partial matches landed exactly on it and passed. "My goods are stuck at the port" was being answered from a pre-shipment inspection record at precisely 0.7.
 
-Where a contradiction is found, both records are returned with their issuing authorities and issue dates, and the system explicitly declines to choose. A contradiction is never counted as an answer for the purpose of service metrics.
+The surviving trigger is *partial-or-worse*, evaluated after judging, so the retry fires only where the request was heading for a refusal or a partial answer (Fig. 2). The rewrite is a **retrieval key only** — never reaching the generator, never displayed, so it cannot introduce a claim — and the second pass is judged against the user's original words.
 
-### D. Generation and Grounding
+```
+        question
+           │
+           ▼
+      retrieval ──── nothing found ─────┐
+           │ candidates                 │
+           ▼                            │
+   relevance judging                    │
+           │                            │
+      best score?                       │
+      ┌────┴─────┐                      │
+    >0.7       ≤0.7 ────────────────────┤
+      │                                 │
+      ▼                                 ▼
+  answer path            rewrite into corpus terms
+                                        │
+                                        ▼
+                          retrieve + judge, scored
+                          against the ORIGINAL words
+                                        │
+                              better or equal?
+                                 ┌──────┴──────┐
+                                yes            no
+                                 │              │
+                                 ▼              ▼
+                            answer path   keep first pass
 
-Generation is a strategy behind a single interface, with two implementations: a language model conditioned on the retrieved passages, and an extractive strategy returning the highest-ranked passage verbatim. The second is not an error path but a designed degradation: it is the operating mode where no model is available, and the destination of every failure in the generation path.
+  falsified triggers:
+    low lexical score  never fired (wrong records score 0.58-0.69)
+    below the bar      never fired (partial sits exactly ON the bar)
+```
 
-Every generated draft is verified before display. Each sentence is checked for lexical support within a *single* passage — not the union of passages, since a claim assembled from fragments of several sources is supported by none of them. A draft is accepted only when coverage exceeds a threshold *and* no sentence is unsupported; high aggregate coverage with one unsupported sentence still constitutes an answer containing a claim the sources do not make. A failed draft is discarded and the extractive strategy substituted.
+Fig. 2. Where the retrieval retry belongs. The trigger is evaluated after relevance judging, because a lexical score does not distinguish a confident match from a confidently wrong one. The same path bridges a question asked in a language the corpus is not written in.
 
-### E. Multilingual Operation
+### F. Cross-Language Retrieval and the Ordering of Translation
 
-Six languages are supported. A language is enabled only when it has cleared a measured correctness threshold on its own portion of an acceptance set; until then the system states that support is in preparation rather than answering in it badly. Enabling a language requires an acceptance score to be recorded, since an enablement with no recorded measurement is indistinguishable from ignoring the gate.
+The same mechanism resolves a separate failure. The index holds English and Hindi vocabulary, so a Bengali question shares no term with any record and retrieval returns nothing — the classical cross-language retrieval problem, where translating the query is standard and translating for retrieval differs from translating for a reader [13]. Restating the question in corpus vocabulary bridges it.
 
-The quoted passage always appears in its source language, labelled, and is never translated: a translated quotation is no longer evidence. Interface typography is keyed on *script* rather than language, because Devanagari and Tamil require greater line height than Latin at equal nominal size, and Hindi and Marathi share a script — a mapping keyed on language would require both to be enumerated and would silently omit any future language in that script.
+A deeper conflict then appears between two properties the system already had. Grounding verification checks each generated sentence against the passage that produced it; a Bengali sentence, however faithful, shares no tokens with the English passage it came from. Verification fails, the draft is correctly suppressed, and the extractive fallback quotes English. Measured on the acceptance sets this produced a system answering Bengali questions in English at 0.00 script fidelity.
 
-### F. Voice Interaction
+Three resolutions exist and one is admissible. Weakening verification for non-English trades the central guarantee for a cosmetic one, for the users least able to check a result. Verifying in the answer language means comparing a claim against a machine translation of the evidence, at which point the evidence is no longer the record. The third — **verify first, then translate** — generates in the passage language, verifies unchanged, and translates only what passed (Fig. 3). Translation therefore operates on text already proved to follow from the record: a mistranslation can garble an answer but cannot manufacture a claim. The citation is never translated, and the answer is labelled as translated.
 
-A hands-free conversational mode addresses a user population more fluent speaking than typing, and for whom composing a question in Devanagari or Tamil on a mobile keyboard is itself a barrier to asking. The loop is explicit: listen until a natural pause, transcribe, answer, speak, listen again. The system does not listen while speaking, which would transcribe its own output. What is spoken differs from what is displayed: a citation's file reference and issue date support visual checking, and reading them aloud buries the answer, so the source is named once in prose.
+```
+  WRONG — translate, then verify
+  ──────────────────────────────
+   English passage
+        │
+        ▼
+   generate in Bengali
+        │
+        ▼
+   verify against English passage ──▶ no shared tokens: FAILS
+        │
+        ▼
+   draft suppressed, English quoted     (0.00 script fidelity)
 
-### G. Self-Updating Knowledge
+  ALSO WRONG — verify against a translated passage
+  ────────────────────────────────────────────────
+   the claim is checked against a machine translation,
+   so the evidence is no longer the record
 
-Questions the system cannot answer are logged, and a record may be drafted automatically so that the same question is answerable subsequently. Two constraints govern this.
+  CORRECT — verify, then translate
+  ────────────────────────────────
+   English passage
+        │
+        ▼
+   generate in the PASSAGE language
+        │
+        ▼
+   verify sentence-by-sentence ──▶ fails ──▶ suppress, quote
+        │ passes
+        ▼
+   translate the VERIFIED answer ──▶ Bengali answer, labelled
+        │
+        └─▶ citation passage untouched, shown in English
+```
 
-First, a machine-drafted record carries its own authority attribution and is visually distinguished wherever cited. Auto-drafted knowledge that is indistinguishable from a published circular would defeat the entire provenance argument.
+Fig. 3. Verify-then-translate. Translation operates only on text already proved to follow from the record, so a mistranslation can garble an answer but cannot manufacture a claim. The cited passage is never translated, because a translated quotation is not evidence.
 
-Second, drafting is refused for any question turning on a specific figure — a rate, ceiling, deadline or monetary threshold. A model asked for such a figure will supply one, and a plausible invented number is precisely the harm the citation rule exists to prevent. The refusal and its reason are displayed rather than hidden.
+### G. The Language Acceptance Gate
+
+A language is offered only after a recorded measurement on its own acceptance set, scored on answer rate, citation integrity, and *script fidelity* — whether the answer returned in the script it was asked in. The third was added after a first round in which a language answering every question in English passed a gate counting only answer rate; a language answering in another language is not the language it claims to be.
+
+Two properties matter more than the thresholds. Enforcement: before the gate was mechanised the enabled set could be assigned by request, so an enablement backed by a measurement and one ignoring the gate were indistinguishable. Derivation: the enabled set is computed *from* recorded scores rather than configured alongside them, since when the two were maintained separately a language that had passed remained unavailable.
+
+The gate also separates *passing* from *certified*. An acceptance set written by someone who does not speak the language measures pipeline self-consistency, not correctness; certification additionally requires a speaker's review, and the interface distinguishes the two.
+
+The quoted passage always appears in its source language, labelled, and is never translated. Interface typography is keyed on *script* rather than language, because Devanagari and Tamil need greater line height than Latin at equal nominal size, and Hindi and Marathi share a script.
+
+### H. Voice and Self-Updating Knowledge
+
+A hands-free mode serves users more fluent speaking than typing, and for whom composing a question in Devanagari or Tamil on a mobile keyboard is itself a barrier. The loop is explicit — listen until a natural pause, transcribe, answer, speak, listen again — and the system never listens while speaking, which would transcribe its own output. What is spoken differs from what is displayed: a citation's reference and date support visual checking, and reading them aloud buries the answer, so the source is named once in prose.
+
+Unanswerable questions are logged and a record may be drafted automatically, under two constraints. A machine-drafted record carries its own authority attribution and is visually distinguished wherever cited, since auto-drafted knowledge indistinguishable from a published circular would defeat the provenance argument entirely. And drafting is refused for any question turning on a specific figure — a rate, ceiling, deadline or monetary threshold — because a model asked for such a figure will supply one, and a plausible invented number is precisely the harm the citation rule exists to prevent. The refusal and its reason are displayed rather than hidden.
+
+### J. Acting on Ratings
+
+A rating recorded and never read asks users to spend attention and spends none in return; the deployment carried such a control until it was measured. Ratings are informative but biased, better treated as relative evidence than absolute labels [16], so the action taken is deliberately the weakest that helps.
+
+Two *independent* negatives on the same question-and-record pairing withhold that record **from that question only**. It is not retired: being wrong for one question is not being wrong, and one click must not remove a correct circular. One negative is noise. Raters are distinguished so nobody manufactures a consensus by clicking twice — which on an anonymous public surface requires separating anonymous raters, or the threshold is unreachable.
+
+Every negative opens a curation task closed as *record wrong*, *retrieval wrong* or *rating wrong*; the last lifts the suppression and clears the votes behind it. This is a human-in-the-loop division [17] at its cheapest point: the system withholds automatically and corrects only under human judgement. Ratings never edit a record, change its lifecycle state, or move the answer bar. A suppression bumps the generation counter, so cached answers become unreachable exactly as on a lifecycle change.
+
+### K. Channels and Bounded Actions
+
+A messaging channel is served by the same answering component as the browser; one answering to a looser standard would be the worst thing to grow, since the person holding a phone has *less* ability to check a claim than one looking at an evidence panel. The consequence is structural: with no evidence panel, record title, issuing authority and issue date are composed into the message body, because an answer whose provenance did not survive the change of medium would be an uncited answer.
+
+Commercial support agents resolve rather than explain, acting inside the account of the operator deploying them. That path is closed here for jurisdictional rather than technical reasons: this system explains the administration of trade and holds no authority within the departments administering it, and an action appearing to file a declaration would be believed. Actions are therefore confined to those within the system's own authority and reversible — lodging a tracked grievance, requesting a callback, setting a reminder, preparing an application checklist, and watching a cited record for change. The last exists only because of the lifecycle machinery: when a record is superseded, everyone who relied on it is notified. Preparation is explicitly not submission.
 
 ---
 
@@ -231,90 +245,103 @@ Second, drafting is refused for any question turning on a specific figure — a 
 
 The corpus comprises 51 records and 107 passages spanning registration, customs procedure, taxation, micro and small enterprise finance, e-commerce obligation, standards and trade policy. Procedures, terminology and document structures follow the administration's actual practice; specific rates and thresholds are illustrative and marked as such throughout the interface. Evaluation used a set of 30 questions written in the phrasing a practitioner would use, together with a control set of out-of-domain questions.
 
-### B. Answer Rate and Refusal Accuracy
+### B. Answer Rate, Refusal, and the Confidence Source
 
-TABLE I. OUTCOME DISTRIBUTION ON THE EVALUATION SET
+TABLE I. OUTCOMES, AND THE EFFECT OF THE CONFIDENCE SOURCE
 
-| Question class | n | Answered with citation | Contradiction | Refused |
-|---|---|---|---|---|
-| In-domain practitioner questions | 30 | 30 | 0 | 0 |
-| Deliberate contradiction | 1 | 0 | 1 | 0 |
-| Out-of-domain control | 6 | 0 | 0 | 6 |
+| Confidence source | In-domain answered with citation | Contradiction surfaced | Out-of-domain incorrectly answered |
+|---|---|---|---|
+| Lexical (BM25 + coverage) | 27/30 | 1/1 | 3/6 |
+| Relevance judging | 30/30 | 1/1 | 0/6 |
 
-Every in-domain question was answered with at least one citation naming an issuing authority and issue date. Every out-of-domain question was refused. The deliberately contradictory pair was surfaced as a contradiction rather than resolved.
+Every in-domain question was answered with at least one citation naming an issuing authority and issue date; every out-of-domain question was refused; the deliberately contradictory pair was surfaced rather than resolved.
 
-### C. Ablation of the Relevance Judge
+With lexical confidence alone, three out-of-domain questions were answered from topically adjacent records at maximum confidence, including a general-knowledge question answered from a trade policy record. Lowering the threshold admitted more in-domain questions and increased this error; raising it suppressed valid answers. The failure lay not in the threshold's value but in the quantity being thresholded. Relevance judging permitted the threshold to be restored to its specified value while eliminating the errors.
 
-TABLE II. EFFECT OF THE CONFIDENCE SOURCE
+### D. The Language Gate, Before and After
 
-| Confidence source | In-domain answered | Out-of-domain incorrectly answered |
-|---|---|---|
-| Lexical (BM25 + coverage) | 27/30 | 3/6 |
-| Relevance judging | 30/30 | 0/6 |
+Enforcing the gate refused every non-English language, including one offered from the outset with no recorded score. Measurement showed the refusal was correct.
 
-With lexical confidence alone, three out-of-domain questions were answered from topically adjacent records at maximum confidence — including one general-knowledge question answered from a trade policy record. Lowering the threshold to admit more in-domain questions increased this error; raising it suppressed valid answers. The failure was not in the threshold's value but in the quantity being thresholded. Substituting relevance judging permitted the threshold to be restored to its original specified value while eliminating the errors.
+TABLE II. PER-LANGUAGE ACCEPTANCE, BEFORE AND AFTER THE TWO REPAIRS
 
-### D. Defects Exposed by Measurement
+| Language | Answered | Cited | Script | Answered | Cited | Script | Offered |
+|---|---|---|---|---|---|---|---|
+| Hindi | 3/5 | 1.00 | 0.20 | 5/5 | 1.00 | 1.00 | yes |
+| Bengali | 1/5 | 1.00 | 0.00 | 5/5 | 1.00 | 0.80 | yes |
+| Tamil | 1/5 | 1.00 | 0.00 | 5/5 | 1.00 | 1.00 | yes |
+| Telugu | 1/5 | 1.00 | 0.00 | 4/5 | 1.00 | 1.00 | yes |
+| Marathi | 2/5 | 1.00 | 0.00 | 4/5 | 1.00 | 0.75 | **no** |
 
-Several defects survived component-level testing and were exposed only by end-to-end measurement. They are reported because their character is instructive.
+Columns 2–4 are before, 5–7 after. Thresholds: answer rate 0.70, citation integrity 1.00, script fidelity 0.80.
 
-**Title-only records were unreachable.** Retrieval indexed passage bodies while the reranker scored bodies alone; a record naming its subject only in its title was retrieved and then reordered away, causing a different record to be cited. Component tests passed because each stage was individually correct.
+Two distinct defects account for the two halves. Low answer rates were empty retrievals, repaired by the cross-language bridge of Section IV.F. Zero script fidelity was grounding verification correctly rejecting drafts written in a language the passage was not, repaired by the verify-then-translate ordering. Citation integrity was 1.00 throughout: the guarantee held while the surrounding behaviour was wrong, which is the intended relationship between a structural invariant and a tuning failure. Marathi remains withheld at 0.75, since a threshold lowered when a language fails it is not a threshold.
 
-**Cache rehydration lost type information.** Cached citations serialised to JSON returned dates as strings, causing failure on the cache-hit path only. Eighteen unit tests passed throughout because none asserted on the *types* of a rehydrated citation.
+### E. Reference-Free Evaluation
 
-**Inflection blocked retrieval.** A question using one verb form failed to reach a record using another, while a near-identical question succeeded — a discrepancy invisible to any single test case.
+Scoring in the style of a reference-free retrieval-augmented evaluation framework [11], with two measures that framework does not define but this system promises.
 
-**Blocked outcomes were recorded as refusals.** A surface closed by policy produced both a policy message and a "no reliable answer" message, and incremented the counter that triggers automatic escalation. Two distinct conditions had been conflated in the outcome model.
+TABLE III. REFERENCE-FREE SCORES
 
-**Weak passages vetoed strong answers.** An early contradiction heuristic required *low* vocabulary overlap, inverting the intended signal: genuine contradictions exhibit *high* overlap with a polarity difference. The heuristic would have missed every real contradiction.
+| Measure | Value |
+|---|---|
+| Faithfulness | 1.00 |
+| Citation integrity | 1.00 |
+| Refusal accuracy | 1.00 |
+| Answer rate (in-domain) | 1.00 |
+| Answer relevancy | 0.83 |
+| Context precision | 0.83 |
 
-### E. Latency
+Faithfulness at 1.00 is the number the grounding verifier exists to hold: no answer asserted a claim its citation did not support. Relevancy and precision below 1.00 without a fall in faithfulness is the expected signature — retrieval returning passages that were not needed, and answers occasionally addressing a neighbouring question, while never stating anything unsupported. The judge is the model that also serves the pipeline [7], so faithfulness should be read as an upper bound; benchmarks for citation quality [15] provide a stronger external standard.
 
-TABLE III. STAGE LATENCY BUDGET
+### F. Defects Exposed by Measurement
 
-| Stage | Budget (ms) | Degradation on timeout |
-|---|---|---|
-| Language detection | 30 | Fall back to selected language |
-| Query embedding | 120 | Lexical retrieval only |
-| Retrieval | 250 | Report assist unavailable |
-| Relevance judging | 400 | Cap confidence below threshold |
-| Contradiction detection | 50 | Treat as no contradiction |
-| Generation, first token | 700 | Extractive strategy |
-| Generation, complete | 2500 | Truncate at sentence boundary |
-| Grounding verification | 150 | Suppress draft, use extractive |
-| Persistence and audit | 100 | Fail request; answer not shown |
+Several defects survived component-level testing and appeared only end to end. Their character is instructive.
 
-Stage budgets sum to 4 350 ms against a 5 000 ms target. Per-stage timeouts alone proved insufficient: their sum substantially exceeds the target, so several stages running slowly without individually timing out can breach it. A whole-request deadline was added, clamping each stage to the remaining budget and declining to begin generation it cannot complete. Every degradation resolves toward showing less rather than showing something unverified.
+**Title-only records were unreachable.** Retrieval indexed passage bodies while the reranker scored bodies alone, so a record naming its subject only in its title was retrieved and then reordered away. Component tests passed because each stage was individually correct.
 
-### F. Limitations
+**Cache rehydration lost type information.** Cached citations serialised to JSON returned dates as strings, failing on the cache-hit path only. Eighteen unit tests passed because none asserted on the *types* of a rehydrated citation.
 
-Retrieval is lexical, so a question phrased distantly from the corpus vocabulary may be refused although the answer is present. Relevance judging depends on an external model and degrades to refusal when unavailable — a safe failure, but a reduction in service. The corpus is illustrative and small; the reported answer rate characterises the mechanism, not performance at production corpus scale. Correctness was assessed by the authors against known-correct records rather than by independent domain assessors. Per-language correctness was not separately measured, which is why the enablement gate exists rather than being assumed satisfied.
+**A threshold coincided with a scale point.** The judge's scale defines 0.7 as *answers partially*; the answer bar was also 0.7, so partial matches passed as answers. The defect lay in the relationship between two independently reasonable constants, and no component was misbehaving.
+
+**A control collected a signal it never read.** Ratings were written to the audit record and consumed by nothing. No test can fail this: the endpoint returned correctly and the data was stored correctly. It is visible only by asking what *reads* a value after asking what writes it.
+
+**A gate was policy rather than mechanism.** The set of offered languages could be assigned directly, so an enablement backed by a measurement and one ignoring the gate were indistinguishable afterwards. Enforcement revealed a language offered throughout with no score on file.
+
+**A measurement changed nothing.** After enforcement, recorded scores and the offered set were maintained separately, so languages that had passed remained unavailable.
+
+The last three share a shape worth naming: each is a **claim without a mechanism** — a property the system asserted, that no code enforced, and that no test could fail because there was nothing to execute. Such defects are not found by testing behaviour but by asking, for each stated property, which component would refuse if it were violated.
+
+### G. Latency
+
+Per-stage budgets sum to 4 350 ms against a 5 000 ms target, the largest being generation at 2 500 ms and relevance judging at 400 ms. Per-stage timeouts alone proved insufficient: several stages running slowly without individually timing out can breach the target together. A whole-request deadline was added, clamping each stage to the remaining budget and declining to begin generation it cannot finish. Every degradation resolves toward showing less rather than showing something unverified — retrieval timing out reports assist unavailable, judging timing out caps confidence below the bar, generation timing out falls back to extraction, and grounding timing out suppresses the draft.
+
+### H. Limitations
+
+Relevance judging, query rewriting and translation all depend on an external model and degrade to refusal or to an untranslated answer when it is unavailable — safe failures, but reductions in service. The corpus is illustrative and small, so the reported answer rate characterises the mechanism rather than performance at production scale. Correctness was assessed by the authors against known-correct records rather than by independent domain assessors, and the acceptance sets were written by the implementers rather than by speakers of each language, which is why the gate distinguishes a passing language from a certified one. Reference-free scoring uses the same model family that serves the pipeline, a known limitation of model-as-evaluator arrangements [7].
 
 ---
 
 ## VI. EXPECTED OUTCOMES AND IMPACT
 
-**Verifiability as a default.** Every answer carries the record it came from, its issuing authority and its issue date. A user can check the basis of guidance rather than trusting it, and a supervisor reviewing a disputed answer can reconstruct what was shown and on what basis. The audit record is append-only, enforced by withholding the database privilege rather than by application discipline.
+**Verifiability as a default.** Every answer carries the record it came from, its issuing authority and its issue date, so a user can check guidance rather than trust it and a supervisor can reconstruct what was shown and on what basis.
 
-**Reduced confident error.** Refusal is designed to be inexpensive and unembarrassing for the system, and every degradation path resolves toward showing less. In a domain where a wrong answer produces a held consignment or a forfeited incentive, the asymmetry between an admitted gap and a confident error justifies this bias.
+**Reduced confident error.** Refusal is inexpensive for the system and every degradation path resolves toward showing less. Where a wrong answer produces a held consignment or a forfeited incentive, that bias is justified.
 
-**Amendment takes effect immediately.** Retiring a superseded record removes it from the next answer, including from answers already cached. Where guidance is amended continuously, this is the difference between a knowledge base and an archive.
+**Amendment takes effect immediately.** Retiring a superseded record removes it from the next answer, including from answers already cached, and everyone watching that record is told — the difference between a knowledge base and an archive.
 
-**Contradiction becomes visible work.** Records that disagree surface as a disagreement and enter a queue for human resolution, rather than being silently resolved by ranking.
+**Contradiction becomes visible work.** Records that disagree enter a queue for human resolution rather than being resolved silently by ranking.
 
-**Access widens.** Six languages with per-script typography and hands-free voice interaction extend the service to users for whom a keyboard in an unfamiliar script is a barrier. The enablement gate ensures that widening access does not mean answering badly in a language that has not been measured.
-
-**Institutional knowledge accumulates.** Questions that cannot be answered are logged rather than lost, and may be drafted into records, while questions turning on specific figures are deliberately reserved for human authorship.
+**Access widens on measured evidence.** Languages are offered only after a recorded per-language score, and one that fails its threshold is withheld, so widening access does not mean answering badly in a language nobody has measured.
 
 ---
 
 ## VII. CONCLUSION
 
-This paper has argued that for question answering in a consequential administrative domain, provenance must be an architectural precondition rather than a presentation feature. The proposed system enforces four rules structurally: citation is required for an answer to exist, contradiction is detected before confidence is thresholded, unsupported generation is suppressed rather than annotated, and refusal is a successful outcome rather than an error.
+Provenance in a government knowledge platform is better treated as a structural precondition than as a presentation feature. Making an uncited answer unrepresentable, ordering contradiction detection before confidence thresholding, suppressing rather than annotating unsupported generation, and returning refusal as a successful outcome together produce a system whose answers can be checked rather than merely trusted.
 
-Measurement over a trade corpus showed every in-domain question answered with citation and every out-of-domain question refused, and demonstrated that the choice of *what* confidence measures — rather than the threshold applied to it — determines whether unrelated questions are answered. Several defects were exposed only by end-to-end measurement while passing component-level tests, which suggests that systems making guarantees of this kind require tests asserting on the guarantee itself rather than on the correctness of each stage.
+The multilingual result generalises beyond this deployment: grounding verification and multilingual answering conflict whenever evidence and answer are in different languages, and the conflict is resolvable by ordering — verify in the language of the evidence, translate only what passed, never translate the evidence — rather than by weakening either property.
 
-Future work includes semantic retrieval to reduce refusals caused by vocabulary mismatch, independent domain-expert assessment of answer correctness, per-language measurement to populate the enablement gate with evidence, and evaluation at production corpus scale where contradiction between records is common rather than deliberately introduced.
+The defects measurement exposed are the more transferable contribution. Several were invisible to component-level testing because every component behaved as specified, and three were *claims without mechanisms*: properties the system asserted that no code enforced and no test could fail. Finding them required asking, for each stated property, which component would refuse if it were violated.
 
 ---
 
@@ -343,3 +370,15 @@ Future work includes semantic retrieval to reduce refusals caused by vocabulary 
 [11] S. Es, J. James, L. Espinosa-Anke, and S. Schockaert, "RAGAs: Automated evaluation of retrieval augmented generation," in *Proc. 18th Conf. European Chapter of the Association for Computational Linguistics: System Demonstrations*, St. Julians, Malta, 2024, pp. 150–158.
 
 [12] M. E. Cortés-Cediel, A. Segura-Tinoco, I. Cantador, and M. P. Rodríguez Bolívar, "Trends and challenges of e-government chatbots: Advances in exploring open government data and citizen participation content," *Government Information Quarterly*, vol. 40, no. 4, art. 101877, 2023.
+
+[13] J.-Y. Nie, *Cross-Language Information Retrieval*, Synthesis Lectures on Human Language Technologies. San Rafael, CA: Morgan & Claypool, vol. 3, no. 1, pp. 1–125, 2010.
+
+[14] X. Ma, Y. Gong, P. He, H. Zhao, and N. Duan, "Query rewriting in retrieval-augmented large language models," in *Proc. Conf. Empirical Methods in Natural Language Processing (EMNLP)*, Singapore, 2023, pp. 5303–5315.
+
+[15] T. Gao, H. Yen, J. Yu, and D. Chen, "Enabling large language models to generate text with citations," in *Proc. Conf. Empirical Methods in Natural Language Processing (EMNLP)*, Singapore, 2023, pp. 6465–6488.
+
+[16] T. Joachims, L. Granka, B. Pan, H. Hembrooke, and G. Gay, "Accurately interpreting clickthrough data as implicit feedback," in *Proc. 28th Annu. Int. ACM SIGIR Conf. Research and Development in Information Retrieval*, Salvador, Brazil, 2005, pp. 154–161.
+
+[17] X. Wu, L. Xiao, Y. Sun, J. Zhang, T. Ma, and L. He, "A survey of human-in-the-loop for machine learning," *Future Generation Computer Systems*, vol. 135, pp. 364–381, 2022.
+
+[18] F. Shi, X. Chen, K. Misra, N. Scales, D. Dohan, E. H. Chi, N. Schärli, and D. Zhou, "Large language models can be easily distracted by irrelevant context," in *Proc. 40th Int. Conf. Machine Learning (ICML)*, PMLR vol. 202, 2023, pp. 31210–31227.
